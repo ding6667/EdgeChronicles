@@ -555,14 +555,29 @@ UI 层只读 `ProgressionViewModel`（契约见 IMPL-v3.0-EL-03 §7），**不�
 | R-5 | 失败资产已退回 `_WIP/` 并写出 `<名>_fail.json` | `gate.py` 退回逻辑 |
 | R-6 | `_WIP/` 内的资产**不进构建**（构建脚本排除该目录） | 构建配置断言 |
 
-### 7.1 命名与路径的自动验收（`gate.py` 汇总）
+### 7.1 与发布侧 Gate 的边界
 
-| 类别 | 判据 |
-|---|---|
-| 命名正则 | `CH_HERO_*` / `CH_ENEMY_*` / `CH_BOSS_*` / `SC_MODULE_*` / `SC_LANDMARK_*` / `SC_GROUND_*` / `UI_ICON_*` / `UI_PANEL_*` / `VFX_*` / `TX_*`（固定前缀大写，ID 允许大小写字母数字下划线） |
-| 目录分类 | 资产所在目录必须登记在 `gate.py` 的 `RULES` 里 |
-| 授权 | `origin != self` → `license` 非空；`origin == ai` → `generation_record` 非空 |
-| 命令 | `python Tools/art/gate.py --root Assets/_Project/Art --json`，**非零退出码即失败** |
+| | 发布侧（`Tools/build/lint-assets.sh` + `AssetGate.Lint()`） | 美术侧（`Tools/art/gate.py`） |
+|---|---|---|
+| 触发时机 | 出包前 / CI | 资产入库时（提交前） |
+| 判定对象 | 工程现状（能不能出这个包） | 单个资产是否合格 |
+| 重叠项 | G2 命名、G3 贴图规格 | **以美术侧为准**，发布侧在出包前串行调用，不另写第二套 |
+| 唯一真值源 | 机型档 `Tools/build/baselines/*.json`、图集清单 `Tools/art/manifests/ui_atlas_141.csv` | 同左 |
+
+### 7.2 命名与路径的自动验收（`gate.py` 汇总）
+
+| 类别 | 判据 | 判据码 |
+|---|---|---|
+| 命名正则 | `CH_HERO_*` / `CH_ENEMY_*` / `CH_BOSS_*` / `SC_MODULE_*` / `SC_LANDMARK_*` / `SC_GROUND_*` / `UI_ICON_*` / `UI_PANEL_*` / `VFX_*` / `TX_*`（固定前缀大写，ID 允许大小写字母数字下划线） | G5 |
+| 目录分类 | 资产所在目录必须登记在 `gate.py` 的 `RULES` 里 | G5 |
+| 授权 | `origin != self` → `license` 非空；`origin == ai` → `generation_record` 非空 | G7 |
+| **贴图格式分档** | 模型贴图 = RGB 三通道 **无 alpha**；UI / VFX 贴图 = **必须有 alpha**，且 UI 图标四周透明 ≥28% | G3 / G9 |
+| **图集格位占用** | 图集 A 60 / B 63 / C 18（合计 141），格位与 id 唯一；技能 VFX 图集 58/64 | G10 |
+| **资源预算** | 随包贴图内存 ≤ 机型档 `memory.textureMemoryMB`；网格内存 ≤ `memory.meshMemoryMB`（**按最低档 low 判**） | G11 |
+| 命令 | `python Tools/art/gate.py --root Assets/_Project/Art --json --baseline low`，**非零退出码即失败** | — |
+
+> **机型档参数的唯一来源 = `Tools/build/baselines/*.json`**（发布侧维护）。美术 Gate 只读它，不复制任何数值。
+> **出图上限用美术规格**（§4.5 / §7），**不用机型档的 `maxTextureSize` 判出图**——那是运行时上限（低档 `masterTextureLimit=1` → 2048 出图在低档运行时降到 1024），两者不冲突。
 
 ---
 

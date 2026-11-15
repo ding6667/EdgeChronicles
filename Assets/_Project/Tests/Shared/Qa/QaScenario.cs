@@ -142,24 +142,54 @@ namespace EdgeChronicles.Tests.Qa
         public string InvulnVfxId = "vfx_invuln";
     }
 
-    /// <summary>受击 / 击退规格行（IMPL v3.0 §3.1/§3.2、GDD §7.3）。</summary>
+    /// <summary>
+    /// 受击 / 击退规格行（IMPL v3.0 §3.1/§3.2、GDD §7.3）。
+    ///
+    /// 【D-04 裁定后的口径】hold **不再手填**：
+    ///   clip_W = anim_clip_length × 60 ÷ anim_fps   （先把 C 轴换算到 W 轴，再相减）
+    ///   hold   = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)
+    /// 换算后 hold &lt; 0 → **报错，不取 0**。
+    /// </summary>
     public sealed class QaKnockbackRow
     {
         public KnockbackTier Tier = KnockbackTier.Light;
+        /// <summary>硬直总长（W 轴帧）。</summary>
         public int HitstunFrames = CombatSpec.HitstunFramesLight;
+        /// <summary>顿帧（W 轴帧）。</summary>
         public int HitstopFrames = CombatSpec.HitstopFramesLight;
+        /// <summary>顿帧期时间缩放（无量纲）。</summary>
         public float HitstopTimeScale = CombatSpec.HitstopTimeScale;
+        /// <summary>受击剪辑长度（**C 轴帧**）。</summary>
+        public int AnimClipLengthC = 13;
+        /// <summary>受击剪辑帧率（fps）。换算：clip_W = anim_clip_length × 60 ÷ anim_fps。</summary>
+        public int AnimFps = 60;
+        /// <summary>
+        /// 后段窗口帧数（W 轴）。
+        /// 【D-05 裁定】它来自击退曲线的**派生量**，不是常数；默认值 6 只是当前规格。
+        /// </summary>
+        public int RearWindowFrames = CombatSpec.KnockbackRearWindowFrames;
+        /// <summary>hold 的**声明值**（派生列，禁手填）——判据会拿它与重算值比对。</summary>
         public float HoldDuration = CombatSpec.HoldDurationLight;
         public float DistMin = CombatSpec.KnockbackDistMinLight;
         public float DistMax = CombatSpec.KnockbackDistMaxLight;
         /// <summary>派生列：必须等于 hitstop_frames。</summary>
         public int SplitFrame = CombatSpec.HitstopFramesLight;
-        /// <summary>派生列：hitstop_frames + 6。</summary>
+        /// <summary>派生列：hitstop_frames + 后段窗口帧数。</summary>
         public int CurveFrames = CombatSpec.HitstopFramesLight + CombatSpec.KnockbackRearWindowFrames;
-        /// <summary>收身起始进度（剪辑帧 C 轴，进度 = 帧号 − 1）。</summary>
-        public float RecoveryStartProgress = 9f;
+        /// <summary>
+        /// 收身起始进度（C 轴，进度 = 帧号 − 1）。
+        /// 【D-05 裁定】它是**参数**，来自受击剪辑元数据；9 只是当前默认值，不是常数。
+        /// </summary>
+        public float RecoveryStartProgress = CombatSpec.RecoveryStartProgressBase;
         /// <summary>峰值速度（m/s）。</summary>
         public float PeakSpeed = 5.3f;
+
+        /// <summary>按 D-04 裁定的口径重算 hold（W 轴帧）。</summary>
+        public float ComputedHold()
+        {
+            float clipW = AnimClipLengthC * 60f / (AnimFps <= 0 ? 60 : AnimFps);
+            return HitstunFrames - clipW - HitstopFrames * (1f - HitstopTimeScale);
+        }
     }
 
     /// <summary>闪避规格行（GDD §7.2/§7.3、导表断言 #2/#3）。</summary>
@@ -186,6 +216,32 @@ namespace EdgeChronicles.Tests.Qa
         public string UnlockDerivativeId = "";
         public List<string> MechanicTargets = new List<string>();
         public int CostEu = 1;
+    }
+
+    /// <summary>
+    /// `movement_curve.keys` 的两种口径。
+    /// 【为什么做成开关】两条裁定互相矛盾：
+    ///   · 主理人裁定：**逐帧速度（m/s，非归一化）**，A24 = |Σ(keys_i × dt_i) − distance| / distance ≤ 5%，dt = 1/60 s
+    ///     理由：量纲闭合（m/s × s = m），与美术的 MP_HERO_* 位移曲线资产一致。
+    ///   · 设计线裁定（变更单）：**逐帧归一化位移占比（Σ = 1）**，积分距离 = distance × Σkeys。
+    ///     理由：占比与帧率解耦；归一化速度会让积分随帧率变，A24 没有唯一算法。
+    /// 两者不可能同时成立。**在主理人复核前，两种口径都实现**，裁定一下来只改一个开关。
+    /// </summary>
+    public enum CurveKeySemantics
+    {
+        /// <summary>逐帧速度（m/s）。dt 固定 1/60 s。</summary>
+        SpeedMetersPerSecond = 0,
+        /// <summary>逐帧归一化位移占比（无量纲，Σ = 1）。</summary>
+        NormalizedDistanceShare = 1
+    }
+
+    /// <summary>当前生效的曲线口径。默认取主理人裁定。</summary>
+    public static class CurveSemantics
+    {
+        public static CurveKeySemantics Current = CurveKeySemantics.SpeedMetersPerSecond;
+
+        /// <summary>逻辑帧间隔（s）。</summary>
+        public const float DtSeconds = 1f / CombatSpec.LogicFps;
     }
 
     /// <summary>效果键的合并类别（EL-03 §2 A39-1 / A39-2）。</summary>

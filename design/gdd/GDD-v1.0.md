@@ -440,7 +440,7 @@
 | 表 | 新增列 |
 |---|---|
 | `hero_base` | `anim_clip_length`（管线注入）、`knockback_front_ratio`(0.12)、`knockback_peak_speed`(≤18 m/s，且 **30fps 档每帧位移 ≤0.5m**——用最低帧率档做最坏情况校验，不用 60fps)、`dodge_total_frames`(22)、`dodge_move_frames`(16)、`dodge_dist`(3.2–3.6)、`dodge_cd_base`(3.5)、`fwd_final_offset`(≤0.05)。**受击 / 击退的四个时长字段已移入 `skill` 表**——它们是"招式打出去之后受击方的反应"，随招式走；同一 20 帧硬直套在轻击上就是错的 |
-| `skill` | `vfx_pulse_hz`（**默认 0，MVP 不启用脉冲**）、`vfx_outline_px`、`vfx_outline_style`（0=单边实描 / 1=双边中空）、`armor_vfx_id`、`invuln_vfx_id`。取值：`pofeng` px=4 style=0；`huifeng` px=2 style=1。**受击 / 击退四字段按击退档位取三值**：`hitstun_frames`（轻 18 / 中 20 / 重 22，**唯一由策划手填的时长值**）、`hitstop_frames`（2 / 4 / 6）、`hitstop_time_scale`=0.15、`hitstun_hold_duration`（派生只读 = `hitstun_frames` − `anim_clip_length` − `hitstop_frames × (1 − hitstop_time_scale)` = **3.3 / 3.6 / 3.9**）、`knockback_split_frame`（**派生 = `hitstop_frames`，禁手填**）、`knockback_dist_min/max`（轻 0.3–0.6 / 中 0.8–1.2 / 重 1.2–1.5）、`knockback_curve_frames`（派生 = `hitstop_frames` + 6，即 8 / 10 / 12） |
+| `skill` | `vfx_pulse_hz`（**默认 0，MVP 不启用脉冲**）、`vfx_outline_px`、`vfx_outline_style`（0=单边实描 / 1=双边中空）、`armor_vfx_id`、`invuln_vfx_id`。取值：`pofeng` px=4 style=0；`huifeng` px=2 style=1。**受击 / 击退四字段按击退档位取三值**：`hitstun_frames`（轻 18 / 中 20 / 重 22，**唯一由策划手填的时长值**）、`hitstop_frames`（2 / 4 / 6）、`hitstop_time_scale`=0.15、`hitstun_hold_duration`（**派生只读**，**elapsed 式**）= `hitstun_frames − T_收身结束(W)`，其中 `T_收身结束(W) = hitstop_frames + (clip_W − hitstop_time_scale × hitstop_frames)`、`clip_W = clip_length × 逻辑时钟频率 ÷ anim_fps`（**逻辑时钟频率取自 `global_tuning`，不写死 60**）= **3.3 / 3.6 / 3.9**。**hold = 硬直结束时刻 − 收身段结束时刻，只算 hold、不含收身段**；**顿帧期间的动画减速已由 `× (1 − hitstop_time_scale)` 覆盖，不再重复扣一次**（`hitstun − clip_W − hitstop(1 − timeScale)` 与 `hitstun − [hitstop + clip_W − timeScale × hitstop]` 恒等）；**禁止裸式 `hitstun_frames − anim_clip_length`**——跨轴相减，且错得静默、`knockback_split_frame`（**派生 = `hitstop_frames`，禁手填**）、`knockback_dist_min/max`（轻 0.3–0.6 / 中 0.8–1.2 / 重 1.2–1.5）、`knockback_curve_frames`（派生 = `hitstop_frames` + 6，即 8 / 10 / 12） |
 | `cultivation_level` | `cost_eu`（策划填），材料件数派生 |
 | `enemy` | `telegraph_frames`(≥24)、`telegraph_shape_id`、`telegraph_anim_id`、`telegraph_audio_id`（**四列独立，禁止塞 JSON**，否则无法逐列非空校验）；弓手建两行：`fast_shot_frames`=12 / `charge_shot_frames`≥24 |
 
@@ -450,18 +450,18 @@
 
 | # | 断言 | 拦的是什么 |
 |---|---|---|
-| 1 | `anim_clip_length ≥ 12` 且 `hitstun_frames ≥ anim_clip_length` | 资产交多少帧引擎都跟得住，无需三处同步改数 |
+| 1 | `anim_clip_length ≥ 12` 且 `hitstun_frames ≥ clip_W`（**同轴比较**：`clip_W = clip_length × 逻辑时钟频率 ÷ anim_fps`，见上；直接拿 C 轴帧与 W 轴帧比是跨轴） | 资产交多少帧引擎都跟得住，无需三处同步改数 |
 | 2 | `invuln_end ≤ dodge_move_frames ≤ dodge_total_frames` | 无敌溢出位移段 |
 | 3 | `invuln_end − invuln_start ≤ 14`（0.23s 上限） | 无敌过长导致无脑闪 |
 | 4 | `dodge_move_frames` 后残留位移 <0.05m | 收尾滑步 |
-| 5 | **`T(位移归零) + 2 ≤ T(收身起始)`**，两端均为 **W 轴时刻**：`T(归零) = hitstop + 6`、`T(收身) = hitstop + 9 − 0.15 × hitstop` | 人已在播 hold，位移还在推。**旧写法 `curve_frames ≤ hitstun_hold_from` 跨 W/C 两轴（前者是墙钟帧数、后者是剪辑长度），8 ≤ 13 只是碰巧通过，语义不成立——已作废** |
+| 5 | **`T(位移归零) + 2 ≤ T(收身起始)`**，两端均为 **W 轴时刻**：`T(归零) = hitstop + 6`、`T(收身起始) = hitstop + (收身起始进度 − hitstop_time_scale × hitstop)`，其中**收身起始进度由受击剪辑元数据给出（当前默认 9 = 剪辑第 10 帧的进度），不得写死** | 人已在播 hold，位移还在推。**旧写法 `curve_frames ≤ hitstun_hold_from` 跨 W/C 两轴（前者是墙钟帧数、后者是剪辑长度），8 ≤ 13 只是碰巧通过，语义不成立——已作废** |
 | 6 | **必要条件**：`armor_vfx_id ≠ invuln_vfx_id` **且** `vfx_outline_style` 不同（`single_solid` vs `double_hollow`）。`vfx_outline_px` 差 ≥2px、`vfx_pulse_hz` 不同**仅作记录，不参与判定** | 原写法"三选一 OR"有洞：两个都是单边实描、只差 4px 与 6px 也能过，而同形态差 2px 在战斗节奏里不可辨。**结构差异在任何距离、分辨率、色盲与否下都可辨；宽度差要比较才看得出** |
 | 7 | `0 ≤ skill.vfx_pulse_hz ≤ 3` | 闪烁超 WCAG 2.3.1 的每秒 3 次上限 |
 | 8 | **`vfx_pulse_hz = 0`** 或 **`窗口时长 ≥ 1000 ÷ (2 × vfx_pulse_hz)`**（两者任一成立即通过；都不成立则报错"此窗口容不下该频率的完整周期"） | 窗口里塞不满一个完整周期，脉冲退化为"闪一下"，比不加更糟。**用反推式而非写死 250ms**：2Hz→250ms、3Hz→167ms，改频率时按式自动放宽收紧（回锋无敌 5 帧 ≈83ms 即此类，故其 `vfx_pulse_hz` 必须为 0） |
 | 9 | `Σ cultivation_level.cost_eu = 624`（压缩版四线 = 416），且 `Σcost_eu ÷ avg_dungeon_eu ∈ [22, 30]`（压缩版 `[15, 19]`）。**`avg_dungeon_eu` 按每档实际刷本次数加权（4/8/6/5/3），不是五本算术平均** | 有人改材料品阶折算，真实成本与 26 次副本脱钩且**不报错**；算术平均会把孤锋崖的高产出平摊进前三本，门槛栏变成一个"看着合理"的假数 |
 | 10 | 单级 `cost_eu > 0` 且 `Σ affix_curve` 各档单调递增 | 零成本升级、负收益词条 |
 | 11 | `dungeon.cp_threshold` 严格递增、每档 ≥1.3× 上一档，且 **≤ 该档预期总战力** | 门槛跳变，或门槛高于玩家可达战力（如 3900 对 3800 会直接卡死；孤锋崖 3900/3792 属技巧门槛，允许 1.3×） |
-| 12 | **`hitstop_time_scale × hitstop_frames ≤ 1`**（代入 0.15 → 顿帧 ≤ 6 帧）。**展开式**：`(收身起始进度 − 后段窗口帧数) − hitstop_time_scale × hitstop_frames ≥ 2`，即 `(9 − 6) − 0.15h ≥ 2` | 三档 2/4/6 是**用满边界**（重档 gap 2.1 贴线，不是留白），改成 8 帧断言即挂。**写因果式而非 `hitstop ≤ 6`**：后者只给结果，前者给出来历——`time_scale` 若调低，上限会自动放宽，不会变成凭空卡人的常数。注意"公式自动跟上"≠"所有约束都跟上"：延后收身会挤到后段窗口，峰值速度须另验 |
+| 12 | **`hitstop_time_scale × hitstop_frames ≤ 1`**（代入 0.15 → 顿帧 ≤ 6 帧）。**展开式**：`(收身起始进度 − 后段窗口帧数) − hitstop_time_scale × hitstop_frames ≥ 2`（`9` 与 `6` 都是**当前值**不是常数：`9` = 收身起始进度（来自剪辑元数据）、`6` = 后段窗口帧数（击退曲线派生量），两者都从数据读） | 三档 2/4/6 是**用满边界**（重档 gap 2.1 贴线，不是留白），改成 8 帧断言即挂。**写因果式而非 `hitstop ≤ 6`**：后者只给结果，前者给出来历——`time_scale` 若调低，上限会自动放宽，不会变成凭空卡人的常数。注意"公式自动跟上"≠"所有约束都跟上"：延后收身会挤到后段窗口，峰值速度须另验 |
 
 ### 9.5 性能预算
 
@@ -499,7 +499,7 @@ Unity 有 `Material`（一个材质 3 个通道，都进 GBuffer）与 `Addition
 |---|---|---|---|
 | W1 | 立项与管线 | 引擎工程、目录规范、导表工具（含 `anim_clip_length` 自动注入）、买包清单、一键出包、**第 4/7 章与工程/美术章口径对账单** | 空场景能跑、导表跑通、对账单签字 |
 | W2–W3 | 战斗白盒 | 移动/镜头/锁定/普攻 3 段/2 技能/闪避/受击；**W2 埋运行时日志口子**：状态切换时间戳 / 每帧位移向量 / 输入按下与生效帧，格式统一；**且必须埋 E3 的两条独立时间戳管线**（Input System 回调 / Animator 状态进入帧各一路） | 灰盒里能打断 3 只假人；**W2 验收三项，任一不通不算完成**：① 跑通 B2 静态筛查 ② A2/A4/C2/D1a 自动判定 ③ **E3 两条时间戳非同源验证**（同源则 10 帧注入负向用例永远全绿，该判据等于不存在）。另：9 条纯脚本走查项要能读出数——日志口径不统一，9 条判据就会各自读各自的口径，等于又造出 9 个真值源 |
-| **W4** | **手感验证周（Gate 1）** | **22 条**走查表（**9 条纯脚本 / 7 条混合 / 6 条必须人眼**，每条带一个证伪案例）、10 人盲测录屏、动画时长与位移曲线定稿 | **≥18/22 可接受**；一票否决：**C2 闪避无敌帧**（2–16 帧，对哑刀纵斩 10/10）、**D1a**（命中 → 受击起始 ≤3 帧，10/10）、**D1b**（12 帧内可确认"被打中"+"这一下多重"，10/10）、**D5**（霸体/无敌形态可辨：**B2 仅形态组为关键组**——同颜色、仅 `vfx_outline_style` 不同，5 人 × 10 张打乱图，每人 ≥9/10 且 ≥4 人达标，**B2 不过则正式结果不采信**；B1 仅色差组只用于定位"哪个通道在起作用"，不达标不改方案；20 张须含铁砧窟橙底与雾隐竹海浓雾各 ≥2 张，W2 先做静态筛查、W4 补实战 3 分钟 ≥9/10）；**D2 为硬判据**（击退方向与伤害来源一致，8 向含斜向 10/10、距离 1.2–1.5m、不被推入墙内或推落）；**D1b-obs 为观察项不进验收**（4 正轴向动画方向可读 5/5，斜向不计）。**D1b 归属规则**：主通道＝动画 4 变体（美术），兜底通道＝击退曲线指向（程序）；方向读不出时先查 4 变体是否齐，齐则不追美术。**每条判据必须配负向用例**（见 12.1 ④），负向不挂则判据无效。B3 相机跟随不毙 Gate，转排期修复 |
+| **W4** | **手感验证周（Gate 1）** | **22 条**走查表（**9 条纯脚本 / 7 条混合 / 6 条必须人眼**，每条带一个证伪案例；**人眼项按 `Assets/_Project/Tests/Shared/Qa/CriterionCatalog.cs` 的协议执行**，HP-01…HP-12）、10 人盲测录屏、动画时长与位移曲线定稿 | **≥18/22 可接受**；一票否决：**C2 闪避无敌帧**（2–16 帧，对哑刀纵斩 10/10）、**D1a**（命中 → 受击起始 ≤3 帧，10/10）、**D1b**（12 帧内可确认"被打中"+"这一下多重"，10/10）、**D5**（霸体/无敌形态可辨：**B2 仅形态组为关键组**——同颜色、仅 `vfx_outline_style` 不同，5 人 × 10 张打乱图，每人 ≥9/10 且 ≥4 人达标，**B2 不过则正式结果不采信**；B1 仅色差组只用于定位"哪个通道在起作用"，不达标不改方案；20 张须含铁砧窟橙底与雾隐竹海浓雾各 ≥2 张，W2 先做静态筛查、W4 补实战 3 分钟 ≥9/10）；**D2 为硬判据**（击退方向与伤害来源一致，8 向含斜向 10/10、距离 1.2–1.5m、不被推入墙内或推落）；**D1b-obs 为观察项不进验收**（4 正轴向动画方向可读 5/5，斜向不计）。**D1b 归属规则**：主通道＝动画 4 变体（美术），兜底通道＝击退曲线指向（程序）；方向读不出时先查 4 变体是否齐，齐则不追美术。**每条判据必须配负向用例**（见 12.1 ④），负向不挂则判据无效。B3 相机跟随不毙 Gate，转排期修复 |
 | W5–W7 | 核心系统 | 6 条修为线、掉落与保底、装备词条、存档、3 类敌人 AI；**W7 加 AvatarMask 骨骼链断言 + 视觉通道断言 + 精英识别率盲测** | 跑通"打本→升修为→战力涨"；精英识别率 <70% 即开 `elite_marker_enabled` |
 | W8–W10 | 内容量产 | 5 个副本、1 个 Boss、营地、11 条主角动画接入 | 5 本可顺序通关 |
 | W11 | 内容冻结 | 停止加内容，只修不改 | 冻结清单签字 |

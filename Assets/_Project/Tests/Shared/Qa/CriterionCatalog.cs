@@ -43,7 +43,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceRef = "GDD-v1.0.md §7.3 动画硬指标 ①",
                 RelatedAssertionIds = new List<string> { A24 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FDodgePush },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -82,7 +82,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "盲测里若测试者能从受击动画的力度感本身判断档位，则本判据测的是「动画表现」而非「12 帧内可读」；必须固定只播前 12 帧且不显示任何数值，否则结论不可复现。",
                 SourceRef = "GDD-v1.0.md §10.1 W4",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbTier },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -95,7 +95,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "测试者若事先被告知方向，会按预期猜对；必须用打乱顺序的 20 段编号录屏，且不透露目标方向。斜向必须排除（45° 复合击退会被无动画变体直接判死，属判据量错对象）。",
                 SourceRef = "GDD-v1.0.md §10.1 W4（观察项）；§13 附注",
                 NegativeCaseWaiver = "观察项，不进验收：GDD 10.1 明确 4 正轴向方向可读只是观察项（斜向无动画变体，判据量错对象会误杀）。",
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -121,7 +121,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "距离若按「位移曲线的积分」取，会包含顿帧期间被 time_scale 缩放的那一段，与「视觉上被顶开的距离」不是同一个量；两种取法在同一实现上能差 1–2 倍。判据必须声明取数口径（本判据取逻辑位移积分，含顿帧缩放）。",
                 SourceRef = "GDD-v1.0.md §7.3；IMPL-v3.0.md §3.2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbTier },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -134,7 +134,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "场景碰撞体是运行时生成还是关卡预置会改变查询结果；若判据在空场景（无碰撞体）下运行则永远通过。判据必须绑定到「真实关卡 + 预置碰撞体」，否则等于没测。",
                 SourceRef = "GDD-v1.0.md §7.3 D2 优先级",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbWall },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -148,7 +148,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceRef = "GDD-v1.0.md §7.3；IMPL-v3.0.md §3.1；GDD-v1.0.md §9.4 导表硬断言 #11 #12",
                 RelatedAssertionIds = new List<string> { A30 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FHold, CriterionOracle.FHitstopCausal },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -162,7 +162,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceRef = "GDD-v1.0.md §7.3 顿帧语义（D4）；IMPL-v2.0.md §7.1 歧义点 2",
                 RelatedAssertionIds = new List<string> { A30 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitstopCausal },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -230,7 +230,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "预警帧数达标不等于可读：若预警形状是地面圆而实际攻击是扇形，玩家读到的是错的形状。判据必须同时校验「预警形状 = 实际判定形状」，否则会把「有预警」当成「预警正确」。",
                 SourceRef = "GDD-v1.0.md §7.3 / §8.5 / §9.4",
                 LinkedOracleIds = new List<string> { CriterionOracle.FBossTelegraph, CriterionOracle.FTelegraphChannels },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -243,7 +243,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "两个时间戳同源时差值恒为 0，判据永远通过——这是「最容易假通过的一条」。判据必须先证明两条管线非同源，再读差值；只读差值的实现等于没测。",
                 SourceRef = "GDD-v1.0.md §12.1 示例（E3）",
                 LinkedOracleIds = new List<string> { CriterionOracle.FE3Latency, CriterionOracle.FE3SameSource },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {
@@ -256,7 +256,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "遮挡比必须是「被角色剪影遮挡的面积 / 刀光总面积」，不是「刀光占屏面积」——竖直刀光在俯视角下投影只有 0.5% 占屏，若量错对象会误杀全部竖直刀光（B-01 专测这一点）。像素分析必须固定命中判定帧，否则同一刀光不同帧的遮挡比差异可达 2 倍。",
                 SourceRef = "GDD-v1.0.md §7.2 / §12.1 ① / §12.3 错例 5",
                 LinkedOracleIds = new List<string> { CriterionOracle.FBladeOcclusion },
-                Veto = false
+                Veto = false,
             },
             new CriterionRecord
             {

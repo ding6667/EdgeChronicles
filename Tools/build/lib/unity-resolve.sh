@@ -100,22 +100,22 @@ assert_unity_matches_project() {
 }
 
 # unity_editor_is_running <工程根>
-# 判定 Unity Editor 是否正占用本工程。命中任一即视为占用：
-#   1) 工程锁文件 Temp/UnityLockfile 存在（Unity 打开工程时创建）
-#   2) 存在 Unity.exe 进程（Windows；Linux 用 Unity 进程名匹配）
+# 判定 Unity Editor 是否正占用本工程。
+#
+# 关键：进程判定优先于锁文件判定。
+#   Temp/UnityLockfile 在 Editor 被强杀或 batchmode 异常退出后会残留（实测：0 字节的
+#   陈旧锁会让「工程被占用」变成假阳性，把出包白白堵住）。
+#   所以：**能查进程就以进程为准**；只有查不到进程工具时才退回锁文件判定。
 unity_editor_is_running() {
   local root="$1"
-
-  if [ -f "$root/Temp/UnityLockfile" ]; then
-    printf '工程锁文件存在: Temp/UnityLockfile\n'
-    return 0
-  fi
 
   if command -v tasklist >/dev/null 2>&1; then
     if tasklist //FI "IMAGENAME eq Unity.exe" 2>/dev/null | grep -qi "Unity.exe"; then
       printf '检测到正在运行的 Unity.exe 进程\n'
       return 0
     fi
+    # 进程表里没有 Unity → 即使锁文件在，也是陈旧锁
+    return 1
   fi
 
   if command -v pgrep >/dev/null 2>&1; then
@@ -123,7 +123,29 @@ unity_editor_is_running() {
       printf '检测到正在运行的 Unity 进程\n'
       return 0
     fi
+    return 1
+  fi
+
+  # 没有进程查询工具（极简容器）→ 退回锁文件判定
+  if [ -f "$root/Temp/UnityLockfile" ]; then
+    printf '工程锁文件存在: Temp/UnityLockfile（无进程查询工具，按锁文件判定）\n'
+    return 0
   fi
 
   return 1
+}
+
+# unity_clear_stale_lock <工程根>
+# 无 Unity 进程却留着锁文件 → 陈旧锁，清理掉，否则每次出包都被假阳性挡住。
+# 只删 Temp/UnityLockfile 这一个文件，不碰 Temp/ 其他内容。
+unity_clear_stale_lock() {
+  local root="$1"
+  local lock="$root/Temp/UnityLockfile"
+  [ -f "$lock" ] || return 0
+  if unity_editor_is_running "$root" >/dev/null 2>&1; then
+    return 0
+  fi
+  rm -f "$lock" 2>/dev/null && \
+    printf '检测到陈旧的工程锁（无 Unity 进程在跑），已清理: Temp/UnityLockfile\n' >&2
+  return 0
 }

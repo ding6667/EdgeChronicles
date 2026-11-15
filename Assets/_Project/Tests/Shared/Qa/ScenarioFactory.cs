@@ -322,14 +322,33 @@ namespace EdgeChronicles.Tests.Qa
         /// 本夹具按 A33 构造，使基线场景本身是"可判定的合法态"。
         /// 派生 id 与 tier 的对应按 §4.8.5，且受 A33-2 约束（派生只能落在 tier 3 或 5）。
         /// </summary>
+        /// <summary>
+        /// 每个技能的 5 阶 → unlock_type 排列（**阶位不变量**，D-03 裁定）。
+        /// 【口径】tier 1 恒为 stat、tier 5 恒为 mechanic；
+        /// 中间 3 阶（resource / derivative / window）的顺序由各技能自行决定 —— 8 技能各不相同。
+        /// 排列按 IMPL-v3.0 §4.5.4 的 40 阶明细还原。
+        /// </summary>
+        private static readonly string[][] TierOrders =
+        {
+            new string[] { "stat", "resource", "derivative", "window", "mechanic" },  // 拾锋式
+            new string[] { "stat", "window", "derivative", "resource", "mechanic" },  // 迅锋
+            new string[] { "stat", "window", "resource", "derivative", "mechanic" },  // 裂石
+            new string[] { "stat", "window", "derivative", "resource", "mechanic" },  // 回锋
+            new string[] { "stat", "derivative", "resource", "window", "mechanic" },  // 缚锋（破势回锋在 2 阶）
+            new string[] { "stat", "resource", "derivative", "window", "mechanic" },  // 抱元
+            new string[] { "stat", "resource", "derivative", "window", "mechanic" },  // 聚锋
+            new string[] { "stat", "resource", "derivative", "window", "mechanic" }   // 破锋
+        };
+
         private static void BuildDerivatives(QaScenario s)
         {
             // 6 条 new_graphic 派生及其归属（IMPL-v3.0 §4.8.5）
+            // 【D-03 裁定】派生可落在 1 / 2 / 3 / 5 阶；当前 8 条落在 2 / 3 / 5。
             var newGraphicTier = new Dictionary<string, int>
             {
                 { "sk_shifeng", 3 },  // 末跳翻倍 · 拾锋式 3 阶
                 { "sk_xunfeng", 3 },  // 回响 · 迅锋 3 阶
-                { "sk_fufeng", 3 },   // 破势 · 缚锋 3 阶（按 A33-2 对齐）
+                { "sk_fufeng", 2 },   // 破势回锋 · 缚锋 2 阶（D-03 裁定后合法）
                 { "sk_baoyuan", 5 },  // 破罩冲击 · 抱元 5 阶
                 { "sk_jufeng", 5 },   // 聚锋簇 · 聚锋 5 阶
                 { "sk_pofeng", 5 }    // 引爆再展域 · 破锋 5 阶
@@ -347,21 +366,19 @@ namespace EdgeChronicles.Tests.Qa
             for (int i = 0; i < SkillIds.Length; i++)
             {
                 string skillId = SkillIds[i];
+                string[] order = TierOrders[i];
                 for (int tier = 1; tier <= 5; tier++)
                 {
                     var d = new QaDerivativeRow();
                     d.SkillId = skillId;
                     d.Tier = tier;
                     d.CostEu = tier <= 2 ? tier : (tier == 3 ? 3 : (tier == 4 ? 4 : 6));
+                    d.UnlockType = order[tier - 1];
 
-                    switch (tier)
-                    {
-                        case 1: d.UnlockType = "stat"; d.VisualTier = "none"; break;
-                        case 2: d.UnlockType = "resource"; d.VisualTier = "none"; break;
-                        case 3: d.UnlockType = "derivative"; d.VisualTier = "generic"; break;
-                        case 4: d.UnlockType = "window"; d.VisualTier = "param"; break;
-                        default: d.UnlockType = "mechanic"; d.VisualTier = "generic"; break;
-                    }
+                    // 视觉层级：派生阶 = generic / new_graphic；窗口阶 = param；其余 = none。
+                    if (d.UnlockType == "derivative") { d.VisualTier = "generic"; }
+                    else if (d.UnlockType == "window") { d.VisualTier = "param"; }
+                    else { d.VisualTier = "none"; }
 
                     if (tier == 5) { d.MechanicTargets.Add("loop_l4"); } // A41：长度 ≤ 1
 

@@ -95,7 +95,7 @@ public interface ISnapshotReader { CombatSnapshot Read(); }
 | `hitShapes[]` | shape / radius / angle / offsetY / frame / damage / knockback / hitstop / multiHit | frame < active；hitstop ∈ [0.05, 0.25] | 是，≥1 |
 | `resourceDelta` | {onCast, onHit, onKill} i16 | `onCast ≤ 0` | 是 |
 | `coreLink` | {requiresCoreState, writesCoreState, consumeStacks} | `writes` 与 `consumeStacks` **互斥** | 否 |
-| `movementCurve` | string | `mc_*` | 是 |
+| `movementCurve` | string | `mc_*`（14 条曲线清单见 IMPL-v3.0 §1.3） | 是 |
 | `vfxId` / `audioId` | string | `vfx_*` / `sfx_*` | 是 |
 
 ### 3.2 取消窗口：不做 8×8 逐对表，改「标签对」
@@ -196,7 +196,7 @@ public interface IAnchorRegistry {
 | 2 | `skill` | skillId | animClip, phases, entryTags, resourceDelta, coreLink, movementCurve, vfxId, audioId | `totalFrames` | movementCurve, coreLink |
 | 3 | `cancel_window` | (sourceTag, allowTag, fromFrame) | toFrame, resourceCost | `windowLength` | — |
 | 4 | `hit_shape` | shapeId | shape, radius, angle, offsetY, damage, knockbackTier, hitstop, multiHit | `arcLength`, `expectedDps` | — |
-| 5 | `movement_curve` | curveId | keys[], distance, clampMode | `integralDistance` | — |
+| 5 | `movement_curve` | curveId | **keys[]（逐帧速度 m/s，非归一化）**、distance、clampMode | `integralDistance` = Σ(keys_i × dt_i) | — |
 | 6 | `resource` | id | max, regenPerTick, decayPerTick | — | — |
 | 7 | `core_link` | stateId | buffId, durationFrames, conditions | — | — |
 | 8 | `enemy` | enemyId | hp, poise, aiGraph, dropTable | — | — |
@@ -211,11 +211,11 @@ public interface IAnchorRegistry {
 | # | 断言 |
 |---|---|
 | A19 | `phases` 各 ≥1 且 `totalFrames ≤ 90` |
-| A20 | `hitShape.frame < active` |
+| A20 | `hit_shape.frame` 必须落在 active 相段区间内（**换算到同一时间基后比较**——`hit_shape.frame` 是 C 轴帧号、`active` 是逻辑相段长度，跨轴相减不成立） |
 | A21 | `fromFrame ≤ toFrame < totalFrames` |
-| A22 | `cancelWindow` 的标签必须存在于某 `skill.entryTags` |
+| A22 | `cancel_window` 的标签必须存在于「**8 技能 `entryTags` ∪ {门派共有动作标签}**」——闪避是门派共有动作（IMPL §1.3），它在 8 技能表里没有 `entryTags` 行，但可以取消进入任何技能 |
 | A23 | 每 `skill` ≥1 条 `hitShape` |
-| A24 | 曲线积分距离与声明偏差 ≤5% |
+| A24 | `|integralDistance − distance| ÷ distance ≤ 5%`，其中 `integralDistance = Σ(keys_i × dt_i)`（**`keys` = 逐帧速度 m/s**，`dt_i = 1 ÷ 逻辑时钟频率`）；`distance` 手填、`integralDistance` 独立算出，两边互不依赖 |
 | A25 | `coreLink` 的 `writes` 与 `consumeStacks` 互斥 |
 | A26 | `trigger`/`condition`/`effect` 必在枚举内 |
 | A27 | `ForcePhase` 目标阶段存在 |

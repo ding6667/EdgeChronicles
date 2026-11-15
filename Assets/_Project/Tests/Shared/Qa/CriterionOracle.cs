@@ -142,6 +142,14 @@ namespace EdgeChronicles.Tests.Qa
             }
         }
 
+        /// <summary>
+        /// 门派共有动作标签（普攻 / 闪避 / 轻功）。
+        /// 【D-10 裁定】闪避与普攻是**门派共有层**的动作：8 技能表里没有闪避行，
+        /// 所以闪避没有 entryTags 行；但闪避**可以取消进入任何技能**。
+        /// 因此 A22 的判定集合 = 门派技能 entryTags ∪ 门派共有动作标签。
+        /// </summary>
+        public static readonly string[] SharedActionTags = { "dodge", "attack" };
+
         private static void EvalA22(QaScenario s, CriterionVerdict v)
         {
             var known = new HashSet<string>(StringComparer.Ordinal);
@@ -149,6 +157,7 @@ namespace EdgeChronicles.Tests.Qa
             {
                 for (int t = 0; t < s.Skills[i].EntryTags.Count; t++) { known.Add(s.Skills[i].EntryTags[t]); }
             }
+            for (int t = 0; t < SharedActionTags.Length; t++) { known.Add(SharedActionTags[t]); }
             for (int i = 0; i < s.CancelWindows.Count; i++)
             {
                 if (!known.Contains(s.CancelWindows[i].AllowTag)) { v.Add(A22); return; }
@@ -170,6 +179,18 @@ namespace EdgeChronicles.Tests.Qa
                 float dev = CurveIntegratorReference.RelativeDeviation(s.MovementCurves[i]);
                 if (dev > CombatSpec.CurveIntegralTolerance) { v.Add(A24); return; }
             }
+        }
+
+        /// <summary>
+        /// A24 的判定结果明细（供报告用）：口径、积分距离、声明距离、偏差。
+        /// </summary>
+        public static string DescribeA24(QaMovementCurveRow curve)
+        {
+            float integral = CurveIntegratorReference.IntegrateDistance(curve);
+            float dev = CurveIntegratorReference.RelativeDeviation(curve);
+            return "口径=" + CurveSemantics.Current
+                + " 积分=" + integral.ToString("F4") + "m 声明=" + curve.DeclaredDistance.ToString("F4") + "m"
+                + " 偏差=" + (dev * 100f).ToString("F2") + "%";
         }
 
         private static void EvalA25(QaScenario s, CriterionVerdict v)
@@ -302,12 +323,37 @@ namespace EdgeChronicles.Tests.Qa
 
         private static void EvalA33Family(QaScenario s, CriterionVerdict v)
         {
-            // A33：tier ↔ unlock_type 一一对应（§4.5.3 通用模板）
+            // A33：【D-03 裁定后的阶位不变量】——**不存在全局固定的 tier → unlock_type 映射**。
+            //   ① 每个技能的 5 阶恰好覆盖 5 种 unlock_type 各一次；
+            //   ② tier 1 恒为 stat；tier 5 恒为 mechanic；
+            //   ③ 中间 3 阶（resource / derivative / window）的顺序由各技能自行决定。
+            var bySkill = new Dictionary<string, List<QaDerivativeRow>>(StringComparer.Ordinal);
             for (int i = 0; i < s.Derivatives.Count; i++)
             {
                 QaDerivativeRow d = s.Derivatives[i];
-                string expect = ExpectedUnlockType(d.Tier);
-                if (expect != null && d.UnlockType != expect) { v.Add(A33); }
+                List<QaDerivativeRow> lst;
+                if (!bySkill.TryGetValue(d.SkillId, out lst)) { lst = new List<QaDerivativeRow>(); bySkill[d.SkillId] = lst; }
+                lst.Add(d);
+            }
+            foreach (KeyValuePair<string, List<QaDerivativeRow>> kv in bySkill)
+            {
+                List<QaDerivativeRow> rows = kv.Value;
+                if (rows.Count != 5) { v.Add(A33); continue; }
+                var types = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    types.Add(rows[i].UnlockType);
+                    if (rows[i].Tier < 1 || rows[i].Tier > 5) { v.Add(A33); }
+                }
+                if (types.Count != 5) { v.Add(A33); }
+                foreach (string required in AllUnlockTypes)
+                {
+                    if (!types.Contains(required)) { v.Add(A33); }
+                }
+                QaDerivativeRow t1 = FindTier(rows, 1);
+                QaDerivativeRow t5 = FindTier(rows, 5);
+                if (t1 == null || t1.UnlockType != "stat") { v.Add(A33); }
+                if (t5 == null || t5.UnlockType != "mechanic") { v.Add(A33); }
             }
 
             // A33-1：双向承载（tech_skill.unlock_derivative_id ⇄ skill.derivative_ids）
@@ -348,7 +394,8 @@ namespace EdgeChronicles.Tests.Qa
                 int cnt;
                 perSkill.TryGetValue(d.SkillId, out cnt);
                 perSkill[d.SkillId] = cnt + 1;
-                if (d.Tier != 3 && d.Tier != 5) { v.Add(A332); }
+                // 【D-03 裁定】派生可落在 1 / 2 / 3 / 5 阶（当前 8 条落在 2 / 3 / 5）。
+                if (d.Tier != 1 && d.Tier != 2 && d.Tier != 3 && d.Tier != 5) { v.Add(A332); }
             }
             foreach (KeyValuePair<string, int> kv in perSkill)
             {
@@ -491,11 +538,19 @@ namespace EdgeChronicles.Tests.Qa
 
         private static void EvalFeel(QaScenario s, CriterionVerdict v)
         {
-            // F-HOLD：hold ∈ [2,4] 帧（含端点）
+            // F-HOLD：【D-04 裁定后的口径】
+            //   clip_W = anim_clip_length × 60 ÷ anim_fps   （C 轴先换算到 W 轴）
+            //   hold   = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)
+            // 判定三件事：① 换算后 hold >= 0（负数报错，**不取 0**）
+            //           ② hold ∈ [2,4]（含端点）
+            //           ③ 若声明了 hold（派生列，禁手填），必须与重算值相等
             for (int i = 0; i < s.Knockbacks.Count; i++)
             {
-                float h = s.Knockbacks[i].HoldDuration;
-                if (h < CombatSpec.HoldDurationMin || h > CombatSpec.HoldDurationMax) { v.Add(FHold); }
+                QaKnockbackRow k = s.Knockbacks[i];
+                float computed = k.ComputedHold();
+                if (computed < 0f) { v.Add(FHold); continue; }
+                if (computed < CombatSpec.HoldDurationMin || computed > CombatSpec.HoldDurationMax) { v.Add(FHold); continue; }
+                if (Math.Abs(k.HoldDuration - computed) > 0.05f) { v.Add(FHold); }
             }
 
             // F-HITSTOP-CAUSAL：0.15 × hitstop_frames ≤ 1（因果式，不是"≤6"）
@@ -510,7 +565,9 @@ namespace EdgeChronicles.Tests.Qa
             for (int i = 0; i < s.Knockbacks.Count; i++)
             {
                 QaKnockbackRow k = s.Knockbacks[i];
-                float tZero = k.HitstopFrames + CombatSpec.KnockbackRearWindowFrames;
+                // 【D-05 裁定】后段窗口帧数来自击退曲线的派生量，收身起始是参数；
+                // 两者都不是写死的常数（默认值 6 / 9 只是当前规格）。
+                float tZero = k.HitstopFrames + k.RearWindowFrames;
                 float tRec = k.RecoveryStartProgress + 0.85f * k.HitstopFrames;
                 if (tZero + CombatSpec.RecoveryGapMin > tRec) { v.Add(FRecoveryGap); }
             }
@@ -691,17 +748,16 @@ namespace EdgeChronicles.Tests.Qa
             return idx < 0 ? effectOrCondition : effectOrCondition.Substring(0, idx);
         }
 
-        private static string ExpectedUnlockType(int tier)
+        /// <summary>5 种阶位类型（D-03 裁定的阶位不变量用）。</summary>
+        public static readonly string[] AllUnlockTypes = { "stat", "resource", "derivative", "window", "mechanic" };
+
+        private static QaDerivativeRow FindTier(List<QaDerivativeRow> rows, int tier)
         {
-            switch (tier)
+            for (int i = 0; i < rows.Count; i++)
             {
-                case 1: return "stat";
-                case 2: return "resource";
-                case 3: return "derivative";
-                case 4: return "window";
-                case 5: return "mechanic";
-                default: return null;
+                if (rows[i].Tier == tier) { return rows[i]; }
             }
+            return null;
         }
 
         private static float TierDistMin(KnockbackTier tier)

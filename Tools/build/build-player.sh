@@ -249,6 +249,9 @@ assert_unity_matches_project "$UNITY" "$ROOT" \
 
 log_info "Unity: $UNITY  版本: $UNITY_VERSION"
 
+# 先清理陈旧锁（无 Unity 进程却留着锁文件 = 上次异常退出留下的假阳性）
+unity_clear_stale_lock "$ROOT"
+
 if OCCUPANCY="$(unity_editor_is_running "$ROOT")"; then
   log_error "Unity Editor 正占用本工程，构建无法进行：$OCCUPANCY"
   log_error "请先关闭 Unity Editor（含 Hub 里的残留实例），再重新执行本脚本。"

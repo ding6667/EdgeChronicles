@@ -119,6 +119,12 @@ namespace EdgeChronicles.Tests.Qa
         {
             float sum = 0f;
             for (int i = 0; i < curve.Keys.Count; i++) { sum += curve.Keys[i]; }
+            if (CurveSemantics.Current == CurveKeySemantics.SpeedMetersPerSecond)
+            {
+                // 逐帧速度（m/s）× dt（s）= 距离（m）
+                return sum * CurveSemantics.DtSeconds;
+            }
+            // 归一化位移占比（Σ = 1）× 声明距离（m）= 距离（m）
             return sum * curve.DeclaredDistance;
         }
 

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using EdgeChronicles.Data.Tables;
 
 namespace EdgeChronicles.Data.Schema
 {

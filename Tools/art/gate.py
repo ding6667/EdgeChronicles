@@ -18,12 +18,13 @@ gate.py — 《EdgeChronicles》资产入库 Gate
     1  存在未通过项（已退回 _WIP/ 并写 _fail.json）
     2  用法错误 / 内部错误 / 根目录不存在
 
-机器判定的 8 条硬约束
-----------------------
+机器判定的 11 条硬约束
+-----------------------
     G1 面数：角色 ≤15000 三角面；场景模块/地标/地面 ≤3000 三角面
-    G2 贴图尺寸：主角 ≤2048；敌人/Boss ≤1024；场景 ≤512
-    G3 贴图通道：RGB 三通道（color type 2），**无 alpha**（无 tRNS）
-             且 sidecar 的 channels 字段必须为 "R=AO;G=Rough;B=Emissive"
+    G2 贴图尺寸：主角 ≤2048；敌人/Boss ≤1024；场景 ≤512；UI 母版 ≤1024、切片 ≤128
+    G3 贴图位深与通道：**按 G9 的分档执行**（8bit；packed 档必须 RGB 三通道且无
+             alpha / 无 tRNS，channels 字段 = "R=AO;G=Rough;B=Emissive"；
+             rgba 档必须带 alpha，channels 字段 = "RGBA"）
     G4 材质槽数 = 1（OBJ 的 usemtl 分组数 / sidecar 的 material_slots）
     G5 命名合规（按目录分类的正则）
     G6 UV：全部落在 [0,1] 象限；每个 UV 岛距贴图边界 ≥4px；UV 岛之间无重叠
@@ -34,7 +35,7 @@ gate.py — 《EdgeChronicles》资产入库 Gate
     G9 贴图格式分档：**模型贴图 = RGB 三通道、无 alpha**（R=AO G=Rough B=Emissive）；
              **UI / VFX 贴图 = 必须有 alpha**（RGBA），UI 图标另需四周透明 ≥28%
     G10 图集格位占用：图集 A 60 / B 63 / C 18（合计 141），技能图集 58/64
-    G11 资源预算：贴图与网格内存不得超��**最低机型档**（默认 low）的
+    G11 资源预算：贴图与网格内存不得超过**最低机型档**（默认 low）的
              `Tools/build/baselines/<tier>.json` 的 `memory` 段
 
 贴图尺寸口径（不写第二套）
@@ -1406,51 +1407,61 @@ def print_text_report(report):
 # ---------------------------------------------------------------------------
 
 def _self_test():
-    """用合成样本验证判定逻辑本身确实会失败（非静默通过）。"""
+    """用合成样本验证判定逻辑本身确实会失败（非静默通过）。
+
+    每个场景用**独立的临时子目录**，互不污染（否则前一个场景的"故意失败"
+    会漏进下一个场景的"应当通过"断言里）。
+    """
     import tempfile
 
     tmp = tempfile.mkdtemp(prefix="ec_gate_selftest_")
     try:
-        # 1) 一个完全合规的 OBJ + sidecar + PNG
-        hero_dir = os.path.join(tmp, "Character", "Hero")
-        os.makedirs(hero_dir)
-        _write_obj(os.path.join(hero_dir, "CH_HERO_Test.obj"), uv_scale=0.5)
-        _write_png(os.path.join(hero_dir, "TX_Hero.png"), 64, 64)
-        with open(os.path.join(hero_dir, "CH_HERO_Test.meta.json"), "w", encoding="utf-8") as fh:
-            json.dump({
-                "tri_count": 2,
-                "material_slots": 1,
-                "textures": ["TX_Hero.png"],
-                "channels": REQUIRED_CHANNELS,
-                "origin": "self",
-            }, fh)
+        def scenario(name):
+            d = os.path.join(tmp, name)
+            os.makedirs(d)
+            return d
 
-        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        def hero_fixture(root, name="CH_HERO_Test", uv_scale=0.5, uv_min=0.1):
+            d = os.path.join(root, "Character", "Hero")
+            os.makedirs(d)
+            _write_obj(os.path.join(d, "%s.obj" % name), uv_scale=uv_scale, uv_min=uv_min)
+            _write_png(os.path.join(d, "TX_Hero.png"), 64, 64)
+            with open(os.path.join(d, "%s.meta.json" % name), "w", encoding="utf-8") as fh:
+                json.dump({
+                    "tri_count": 2,
+                    "material_slots": 1,
+                    "textures": ["TX_Hero.png"],
+                    "channels": REQUIRED_CHANNELS,
+                    "origin": "self",
+                }, fh)
+            return d
+
+        def run(root):
+            return run_gate(root, dry_run=True, do_reject=False)
+
+        def codes_of(report):
+            return set(f["code"] for r in report["records"] for f in r["failures"])
+
+        # 1) 合规的主角模型必须通过
+        s1 = scenario("s1")
+        hero_fixture(s1)
+        code, report = run(s1)
         assert code == 0, "合规样本应通过，实际 exit=%d\n%s" % (
             code, json.dumps(report, ensure_ascii=False, indent=2))
 
-        # 2) 越界 UV -> 必须失败
-        bad_dir = os.path.join(tmp, "Character", "Enemy")
-        os.makedirs(bad_dir)
-        _write_obj(os.path.join(bad_dir, "CH_ENEMY_Bad.obj"), uv_scale=1.4)
-        _write_png(os.path.join(bad_dir, "TX_Bad.png"), 64, 64)
-        with open(os.path.join(bad_dir, "CH_ENEMY_Bad.meta.json"), "w", encoding="utf-8") as fh:
-            json.dump({
-                "tri_count": 2,
-                "material_slots": 1,
-                "textures": ["TX_Bad.png"],
-                "channels": REQUIRED_CHANNELS,
-                "origin": "self",
-            }, fh)
-        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        # 2) 越界 UV -> 必须失败 G6-RANGE
+        s2 = scenario("s2")
+        hero_fixture(s2, name="CH_HERO_Bad", uv_scale=1.4)
+        code, report = run(s2)
         assert code == 1, "越界 UV 样本必须失败，实际 exit=%d" % code
-        codes = {f["code"] for r in report["records"] for f in r["failures"]}
-        assert "G6-RANGE" in codes, "应命中 G6-RANGE，实际 %s" % codes
+        assert "G6-RANGE" in codes_of(report), "应命中 G6-RANGE"
 
         # 3) 命名不合规 + 缺 license -> 必须失败
-        bad_dir2 = os.path.join(tmp, "Character", "Enemy")
-        _write_obj(os.path.join(bad_dir2, "bad name.obj"), uv_scale=0.5)
-        with open(os.path.join(bad_dir2, "bad name.meta.json"), "w", encoding="utf-8") as fh:
+        s3 = scenario("s3")
+        d3 = os.path.join(s3, "Character", "Enemy")
+        os.makedirs(d3)
+        _write_obj(os.path.join(d3, "bad name.obj"), uv_scale=0.5)
+        with open(os.path.join(d3, "bad name.meta.json"), "w", encoding="utf-8") as fh:
             json.dump({
                 "tri_count": 2,
                 "material_slots": 1,
@@ -1459,50 +1470,55 @@ def _self_test():
                 "origin": "purchased",
                 "license": "",
             }, fh)
-        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        code, report = run(s3)
         assert code == 1
-        codes = {f["code"] for r in report["records"] for f in r["failures"]}
-        assert "G5-NAME" in codes, "应命中 G5-NAME，实际 %s" % codes
-        assert "G7-LICENSE" in codes, "应命中 G7-LICENSE，实际 %s" % codes
+        got = codes_of(report)
+        assert "G5-NAME" in got, "应命中 G5-NAME，实际 %s" % got
+        assert "G7-LICENSE" in got, "应命中 G7-LICENSE，实际 %s" % got
 
-        # 3b) UI 图标：合规（RGBA + 透明边）必须通过
-        ui_dir = os.path.join(tmp, "UI", "Source")
-        os.makedirs(ui_dir)
-        _write_png(os.path.join(ui_dir, "UI_ICON_SKL_Core.png"), 64, 64,
+        # 4) 合规 UI 图标（RGBA + 透明边 >=28%）必须通过
+        s4 = scenario("s4")
+        d4 = os.path.join(s4, "UI", "Source")
+        os.makedirs(d4)
+        _write_png(os.path.join(d4, "UI_ICON_SKL_Core.png"), 64, 64,
                    rgba=True, margin_ratio=0.35)
-        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        code, report = run(s4)
         assert code == 0, "合规 UI 图标应通过，实际 exit=%d\n%s" % (
             code, json.dumps(report, ensure_ascii=False, indent=2))
 
-        # 3c) UI 图标：没有 alpha 必须失败（G3-NOALPHA）
-        _write_png(os.path.join(ui_dir, "UI_ICON_SKL_Light.png"), 64, 64, rgba=False)
-        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        # 5) UI 图标没有 alpha -> 必须失败 G3-NOALPHA
+        s5 = scenario("s5")
+        d5 = os.path.join(s5, "UI", "Source")
+        os.makedirs(d5)
+        _write_png(os.path.join(d5, "UI_ICON_SKL_Light.png"), 64, 64, rgba=False)
+        code, report = run(s5)
         assert code == 1
-        codes = {f["code"] for r in report["records"] for f in r["failures"]}
-        assert "G3-NOALPHA" in codes, "应命中 G3-NOALPHA，实际 %s" % codes
+        assert "G3-NOALPHA" in codes_of(report), "应命中 G3-NOALPHA"
 
-        # 3d) UI 图标：透明边不足必须失败（G9-BORDER）
-        os.remove(os.path.join(ui_dir, "UI_ICON_SKL_Light.png"))
-        _write_png(os.path.join(ui_dir, "UI_ICON_SKL_Heavy.png"), 64, 64,
+        # 6) UI 图标透明边不足 -> 必须失败 G9-BORDER
+        s6 = scenario("s6")
+        d6 = os.path.join(s6, "UI", "Source")
+        os.makedirs(d6)
+        _write_png(os.path.join(d6, "UI_ICON_SKL_Heavy.png"), 64, 64,
                    rgba=True, margin_ratio=0.10)
-        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        code, report = run(s6)
         assert code == 1
-        codes = {f["code"] for r in report["records"] for f in r["failures"]}
-        assert "G9-BORDER" in codes, "应命中 G9-BORDER，实际 %s" % codes
-        os.remove(os.path.join(ui_dir, "UI_ICON_SKL_Heavy.png"))
+        assert "G9-BORDER" in codes_of(report), "应命中 G9-BORDER"
 
-        # 4) 真实退回：确认文件被移进 _WIP 且写出 _fail.json
-        code, report = run_gate(tmp, dry_run=False, do_reject=True)
+        # 7) 真实退回：确认文件被移进 _WIP 且写出 _fail.json
+        s7 = scenario("s7")
+        hero_fixture(s7, name="CH_HERO_Fail", uv_scale=1.4)
+        code, report = run_gate(s7, dry_run=False, do_reject=True)
         assert code == 1
         wip_files = []
-        for dirpath, _dirs, filenames in os.walk(os.path.join(tmp, WIP_DIR)):
+        for dirpath, _dirs, filenames in os.walk(os.path.join(s7, WIP_DIR)):
             wip_files.extend(filenames)
         assert any(f.endswith("_fail.json") for f in wip_files), \
             "应生成 _fail.json，实际 %s" % wip_files
 
         print("self-test OK：合规样本通过、违规样本失败、"
               "模型贴图无 alpha / UI 贴图必须有 alpha / 透明边框判定均生效、"
-              "失败资产退回 _WIP 并写 _fail.json")
+              "图集格位与资源预算判定接入、失败资产退回 _WIP 并写 _fail.json")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
