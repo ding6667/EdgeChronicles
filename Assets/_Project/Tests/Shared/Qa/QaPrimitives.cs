@@ -100,8 +100,8 @@ namespace EdgeChronicles.Tests.Qa
     /// </summary>
     public static class CriterionCounts
     {
-        /// <summary>全量在册判据数（22 走查 + 47 断言 / 打击感判据 = 69）。</summary>
-        public const int TotalCriterionCount = 69;
+        /// <summary>全量在册判据数（22 走查 + 48 断言 / 打击感判据 = 70）。</summary>
+        public const int TotalCriterionCount = 70;
         /// <summary>负向用例数（24 A 类 + 6 B 类 = 30）。</summary>
         public const int NegativeCaseCount = 30;
         /// <summary>正向走查数（9 纯脚本 + 7 混合 + 6 必须人眼 = 22）。</summary>
