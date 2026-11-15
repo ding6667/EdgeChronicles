@@ -18,7 +18,26 @@
 """
 
 import copy
+import io as _io
+import os as _os
+import re as _re
 import sys
+
+# ── 契约版本绑定 ────────────────────────────────────────────────────────
+# 【为什么】一个自检如果不会因为自己过期而变红，它就不是自检。
+# 本镜像声明自己对应的 oracle 契约版本；运行时与 C# 源里的常量比对，
+# 不一致即红 —— 这样"镜像落后于 oracle"会立刻暴露，而不是安静地报绿。
+MIRROR_CONTRACT_VERSION = "2026-11-15.r4"
+
+
+def _oracle_contract_version():
+    root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    path = _os.path.join(root, "Assets/_Project/Tests/Shared/Qa/CriterionOracle.cs")
+    if not _os.path.exists(path):
+        return None
+    src = _io.open(path, encoding="utf-8").read()
+    m = _re.search(r'ContractVersion\s*=\s*"([^"]+)"', src)
+    return m.group(1) if m else None
 
 import copy
 TAGS=["core","light","heavy","dash","control","guard","channel","finisher"]
@@ -54,14 +73,13 @@ KbPerFrameMax=0.5,RecoveryGapMin=2.0,DodgeInvulnMaxSpan=14,BladeOcclusionMax=0.3
 CpMinRatio=1.3,CurveTol=0.05,HitstopMin=0.05,HitstopMax=0.25,VfxBudget=8,VfxGeneric=2,DerivativeNewGraphicCount=6,
 RecoveryStartBase=9.0,RearWindow=6,DodgePushMax=0.05,HitFeedbackMax=3,KbDirTol=45.0,InkContrastMin=0.6,InkPx=3,
 HitClipHeightMin=3.0,HitClipFramesMin=2,HitClipVariantsMin=4,Dt=1.0/60.0)
-CURVE_SEMANTICS="speed"   # "speed"(m/s) | "share"(Σ=1)
+# 终裁口径：逐帧速度（m/s）。归一化占比路径已删除（两套并存 = 第三个真值源）。
 
 def make_curve(cid, declared, n, scale=1.0):
     shape=[1.0-(i/(n-1.0))*0.6 for i in range(n)]; tot=sum(shape); c=dict(id=cid,declared=declared,keys=[])
     for sh in shape:
         share=sh/tot
-        c["keys"].append((share*declared/C["Dt"]) if CURVE_SEMANTICS=="speed" else share*scale)
-        if CURVE_SEMANTICS=="speed": c["keys"][-1]*=scale
+        c["keys"].append(share*declared*scale/C["Dt"])
     return c
 
 def baseline():
@@ -123,6 +141,8 @@ def baseline():
     s["effects"]=[dict(key="resource_cap",cls="cap",src=[1.0,1.0],merged=1.0),
                   dict(key="atk_flat",cls="num",src=[5.0,8.0],merged=5.0),
                   dict(key="crit_flag",cls="disc",src=[1.0],merged=1.0)]
+    s["combo_seq"]=["control","channel","heavy","core","finisher","guard","dash","core"]
+    s["combo_frames"]=600; s["combo_dt"]=1.0/60.0; s["combo_hitstop_frames"]=12
     s.update(resource=0,independent=True,inj_lat=0,meas_lat=0.0,occl=0.18,coverage=0.005,fps=30.0,push=0.03,
         feedback=2,kbdir=180.0,dmgdir=0.0,wall=False,fall=False,tele=30,t_circle=True,t_shape=True,t_audio=True,
         ink=0.72,inkpx=3,slots=1,addmat=False,clearcoat=False,elite_col=1.4,elite_vis=1.4,
@@ -153,7 +173,7 @@ def evaluate(s):
     for w in s["cancels"]:
         if w["allow"] not in known: add("A22")
     for c in s["curves"]:
-        integral = sum(c["keys"])*C["Dt"] if CURVE_SEMANTICS=="speed" else sum(c["keys"])*c["declared"]
+        integral = sum(c["keys"])*C["Dt"]
         if abs(integral-c["declared"])/c["declared"]>C["CurveTol"]: add("A24")
     for r in s["rules"]:
         if r["trig"] not in TRIGGERS: add("A26")
@@ -173,6 +193,13 @@ def evaluate(s):
     for b in s["bosses"]:
         if b["arena"] not in s["anchors"]: add("A28")
     if s["resource"]<0: add("A29")
+    # 【D-09】连段模拟还必须：帧数够长 + 跑过顿帧帧（顿帧不暂停 tick）
+    if s.get("combo_frames",600)<=0: add("A29")
+    if s.get("combo_hitstop_frames",12)<=0: add("A29")
+    seq=s.get("combo_seq",[])
+    if len(seq)>0:
+        sim_s = s.get("combo_frames",600) * s.get("combo_dt",1.0/60.0)
+        if sim_s < len(seq)*s.get("combo_dt",1.0/60.0): add("A29")
     indeg={n["id"]:0 for n in s["stars"]}; ch={n["id"]:[] for n in s["stars"]}
     for n in s["stars"]:
         for p in n["pre"]:
@@ -371,6 +398,9 @@ def inject_s(cid,s):
     elif cid=="S-14":
         # 【D-14 第三条路】高于上限的可达值 4.8（重档硬直 22 → 23）
         k=kb(s,"heavy"); k["hitstun"]=23; syn_hold(k)
+    elif cid=="S-16":
+        # 【D-09】连段模拟没跑顿帧帧
+        s["combo_hitstop_frames"]=0
     elif cid=="S-15":
         # hold 重算为负（clip 17 → −0.7），D-04 要求报错不取 0
         k=kb(s,"light"); k["clip_c"]=17; syn_hold(k)
@@ -386,16 +416,21 @@ TARGET={"NC-A01":"F-DODGE-INVULN","NC-A02":"F-HIT-FEEDBACK","NC-A03":"F-KB-DIREC
 "NC-B05":"A33-1","NC-B06":"F-HOLD"}
 ST={"S-01":"A21","S-02":"A21","S-03":"A23","S-04":"A24","S-05":"A25","S-06":"A26","S-07":"A27",
 "S-08":"A28","S-09":"A29","S-10":"A30","S-11":"A35","S-12":"A39-1","S-13":"A39-2",
-"S-14":"F-HOLD","S-15":"F-HOLD"}
+"S-14":"F-HOLD","S-15":"F-HOLD","S-16":"A29"}
 
 COMPANIONS={"NC-A16":{"F-RECOVERY-GAP"},"NC-A22":{"A21"}}
 
 
 def main():
     failures = []
-    for sem in ("speed", "share"):
-        global CURVE_SEMANTICS
-        CURVE_SEMANTICS = sem
+    actual = _oracle_contract_version()
+    if actual is None:
+        failures.append("读不到 oracle 的 ContractVersion —— 镜像无法确认自己是否过期")
+    elif actual != MIRROR_CONTRACT_VERSION:
+        failures.append("**镜像版本落后于 oracle**：镜像声明 %s，oracle 是 %s。"
+                        "改判据逻辑必须同时更新两者的版本号，否则这个自检会在过期后继续报绿。"
+                        % (MIRROR_CONTRACT_VERSION, actual))
+    for sem in ("speed",):
         base = baseline()
         fired = evaluate(base)
         if fired:
@@ -436,8 +471,8 @@ def main():
             print("       " + f)
         return 1
 
-    print("[OK   ] 合法基线零报红；30 条规范集（24 A 类 + 6 B 类）+ 15 条补充集"
-          "在两种曲线口径下全部符合预期")
+    print("[OK   ] 合法基线零报红；30 条规范集（24 A 类 + 6 B 类）+ 16 条补充集"
+          "在终裁口径（逐帧速度 m/s）下全部符合预期；镜像契约版本 " + MIRROR_CONTRACT_VERSION)
     return 0
 
 

@@ -21,6 +21,15 @@ namespace EdgeChronicles.Tests.Qa
     /// </summary>
     public static class CriterionOracle
     {
+        /// <summary>
+        /// 判据逻辑的**契约版本号**。
+        /// 【为什么需要】一个自检如果不会因为自己过期而变红，它就不是自检。
+        /// `docs/qa/qa_oracle_mirror.py` 声明自己对应的版本号，运行时与本常量比对，
+        /// 不一致即红 —— 这样"镜像落后于 oracle"会立刻暴露，而不是安静地报绿。
+        /// 任何改动 oracle 判定逻辑的提交，**必须同时更新本常量与镜像的版本声明**。
+        /// </summary>
+        public const string ContractVersion = "2026-11-15.r4";
+
         // ── 导表断言编号（IMPL-v2.0 §5 A19–A30 / EL-03 §2 A31–A43）──
         public const string A19 = "A19"; // phases 各 ≥1 且 totalFrames ≤ 90
         public const string A20 = "A20"; // hitShape.frame < active
@@ -262,7 +271,20 @@ namespace EdgeChronicles.Tests.Qa
 
         private static void EvalA29(QaScenario s, CriterionVerdict v)
         {
+            // A29 连段模拟不产生负资源。
             if (s.ResourceAfterCombo < 0) { v.Add(A29); }
+            // 【D-09 裁定】模拟还必须满足两条执行口径，否则"没报红"没有意义：
+            //   ① 帧数够长：模拟时长覆盖序列所需时长
+            //   ② 跑过顿帧帧：顿帧不暂停 tick，状态机在顿帧期间仍须合法推进
+            if (s.ComboSimulationFrames <= 0) { v.Add(A29); }
+            if (s.ComboSequence.Count > 0)
+            {
+                float simulatedSeconds = s.ComboSimulationFrames * s.ComboFrameDeltaSeconds;
+                // 每段技能至少 1 帧推进（真实时长远大于此，这里只判"帧数不是明显不足"）
+                float minimumSeconds = s.ComboSequence.Count * s.ComboFrameDeltaSeconds;
+                if (simulatedSeconds < minimumSeconds) { v.Add(A29); }
+            }
+            if (s.ComboHitstopFrames <= 0) { v.Add(A29); }
         }
 
         private static void EvalA30(QaScenario s, CriterionVerdict v)

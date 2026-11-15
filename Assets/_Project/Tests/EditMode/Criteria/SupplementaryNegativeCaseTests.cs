@@ -118,6 +118,11 @@ namespace EdgeChronicles.Tests.Criteria
                     }
                     return;
 
+                case "S-16": // A29：连段模拟没跑顿帧帧（顿帧不暂停 tick，必须跑过）
+                    // 【D-09 裁定】连段模拟必须跑过顿帧帧，否则验不到"顿帧期间状态机仍在合法推进"。
+                    s.ComboHitstopFrames = 0;
+                    return;
+
                 case "S-13": // A39-2：数值类多来源被相加（应取最小不叠加）
                     for (int i = 0; i < s.EffectMerges.Count; i++)
                     {
@@ -140,13 +145,13 @@ namespace EdgeChronicles.Tests.Criteria
             CriterionOracle.A25, CriterionOracle.A26, CriterionOracle.A27, CriterionOracle.A28,
             CriterionOracle.A29, CriterionOracle.A30, CriterionOracle.A35,
             CriterionOracle.A391, CriterionOracle.A392,
-            CriterionOracle.FHold, CriterionOracle.FHold
+            CriterionOracle.FHold, CriterionOracle.FHold, CriterionOracle.A29
         };
 
         private static readonly string[] Ids =
         {
             "S-01", "S-02", "S-03", "S-04", "S-05", "S-06", "S-07", "S-08",
-            "S-09", "S-10", "S-11", "S-12", "S-13", "S-14", "S-15"
+            "S-09", "S-10", "S-11", "S-12", "S-13", "S-14", "S-15", "S-16"
         };
 
         [Test]

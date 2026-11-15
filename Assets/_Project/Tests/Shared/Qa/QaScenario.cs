@@ -250,22 +250,26 @@ namespace EdgeChronicles.Tests.Qa
     /// </summary>
     public enum CurveKeySemantics
     {
-        /// <summary>逐帧速度（m/s）。dt 固定 1/60 s。</summary>
-        SpeedMetersPerSecond = 0,
-        /// <summary>逐帧归一化位移占比（无量纲，Σ = 1）。</summary>
-        NormalizedDistanceShare = 1
+        /// <summary>
+        /// 逐帧速度（m/s，非归一化）。**终裁口径，唯一保留的一种。**
+        /// A24 = |integralDistance − distance| ÷ distance ≤ 5%，dt = 1/60 s。
+        /// </summary>
+        SpeedMetersPerSecond = 0
     }
 
     /// <summary>
     /// 当前生效的曲线口径。
     ///
-    /// 【已裁定 · 2026】**逐帧速度（m/s，非归一化）** —— 主理人与设计线两票一致
-    /// （设计线已撤回归一化方案：美术规格写死 `MP_HERO_*` 单位为 m/s，
-    ///  且归一化方案下 `distance` 根本不进断言，A24 会退化成格式检查）。
+    /// 【终裁 · 2026-11-15】**逐帧速度（m/s，非归一化）**，唯一保留的一种。
     ///
-    /// 归一化口径仍保留在枚举里：它是**已归档的备选方案**，
-    /// 保留它是为了让"当年为什么这么裁"在代码里可查，而不是只剩一句结论。
-    /// 切换它只需改 `Current` 一个值 —— 判据形式两边一致，基线也按当前口径生成。
+    /// · 主理人裁定：量纲闭合（m/s × s = m），且美术规格写死 `MP_HERO_*` 单位为 m/s。
+    /// · 设计线已撤回归一化方案：归一化占比下 `Σkeys = 1` 无意义，
+    ///   且 `distance` 根本不进断言 —— A24 会退化成格式检查、永远报绿。
+    /// · QA 独立推出的判别力论证与之同源：占比口径下 A24 ≡「Σkeys = 1」。
+    ///
+    /// **归一化路径已删除**（曾短暂并存）：两套长期并存就是第三个真值源。
+    /// 保留 `Current` 这个开关本身，是因为将来美术若改了 `MP_HERO_*` 的单位语义，
+    /// 一个开关就能切回去重新评估 —— 这不是"留两套判据"，是"留一个回退点"。
     /// </summary>
     public static class CurveSemantics
     {
@@ -434,5 +438,23 @@ namespace EdgeChronicles.Tests.Qa
         public float HitClipReverseContactHeightCm = 4.0f;
         /// <summary>反向变体中接触点持续离地 ≥3cm 的连续帧数。</summary>
         public int HitClipReverseContactFrames = CombatSpec.HitClipContactFramesMin;
+
+        // ── 连段模拟（D-09 裁定：固定的标准序列 + 固定时间步长）────────────
+        // A29 的目的是验「状态机不会产生非法状态」，不是验「某一条连段能跑通」。
+        // 序列只要**固定且可复现**，判据就有着力点；绑死某一条序列会让另一条合法连段被误杀
+        // —— 那正是 B 类用例要防的病。所以：**标准序列是基线，不是唯一合法输入**。
+
+        /// <summary>标准连段序列（技能 tag 顺序）。熟练链 = 主序列；新手链 = 最小序列。</summary>
+        public List<string> ComboSequence = new List<string>();
+        /// <summary>模拟总帧数（D-09 裁定：600 帧）。</summary>
+        public int ComboSimulationFrames = 600;
+        /// <summary>时间步长（s）。逻辑 60Hz。</summary>
+        public float ComboFrameDeltaSeconds = 1f / CombatSpec.LogicFps;
+        /// <summary>
+        /// 连段模拟覆盖的顿帧帧数。
+        /// 【顿帧不暂停 tick】顿帧只改表现层时间缩放与位移积分系数，8 阶段照常推进、PhaseFrame 继续走。
+        /// 连段模拟**必须跑过顿帧帧**，否则验不到"顿帧期间状态机仍在合法推进"。
+        /// </summary>
+        public int ComboHitstopFrames = 12;
     }
 }

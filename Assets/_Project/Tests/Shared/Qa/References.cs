@@ -8,7 +8,7 @@ namespace EdgeChronicles.Tests.Qa
     //
     // 【定位】生产侧会实现同一套几何 / 积分 / 校验逻辑。测试侧再实现一份，
     // 目的不是"写两遍"，而是让判据**可以被证伪**（GDD §12.1 ④）：
-    // 若两份实现对同一场景给出不同结论 → 报告红，而不是让"唯一那一份"说了算。
+    // 若两份实现对同一场景给出不同结论 → 报告红，而不是让「唯一那一份」说了算。
     //
     // 【纪律】参考实现里出现的每一个阈值都来自 CombatSpec（测试侧规格卡），
     // 不允许在方法体内写裸数字——否则会变成第三份真值源。
@@ -119,13 +119,8 @@ namespace EdgeChronicles.Tests.Qa
         {
             float sum = 0f;
             for (int i = 0; i < curve.Keys.Count; i++) { sum += curve.Keys[i]; }
-            if (CurveSemantics.Current == CurveKeySemantics.SpeedMetersPerSecond)
-            {
-                // 逐帧速度（m/s）× dt（s）= 距离（m）
-                return sum * CurveSemantics.DtSeconds;
-            }
-            // 归一化位移占比（Σ = 1）× 声明距离（m）= 距离（m）
-            return sum * curve.DeclaredDistance;
+            // 逐帧速度（m/s）× dt（s）= 距离（m）。终裁口径，唯一一种。
+            return sum * CurveSemantics.DtSeconds;
         }
 
         /// <summary>相对偏差（0..1）。声明距离为 0 时返回 +∞（不可判）。</summary>
@@ -215,7 +210,7 @@ namespace EdgeChronicles.Tests.Qa
 
         /// <summary>
         /// 冷启动求值：按 rule 的声明顺序，产生 Effect 触发序列。
-        /// 只做"顺序"与"存在性"，不做战斗数值——与 IMPL v2.0 §6「记录 Effect 触发序列」一致。
+        /// 只做「顺序」与"存在性"，不做战斗数值——与 IMPL v2.0 §6「记录 Effect 触发序列」一致。
         /// </summary>
         public static List<string> EvaluateSequence(QaBossRow boss, List<QaBossRuleRow> rules, QaScenario scenario)
         {
@@ -256,7 +251,7 @@ namespace EdgeChronicles.Tests.Qa
     /// 【为什么要登记而不是修掉】
     /// 判据与被测规格冲突时，正确动作是**改判据或改规格**，不是放宽阈值；
     /// 但改哪一边属于规格裁定权（主理人 / 策划），不在 QA。
-    /// QA 的职责是：把冲突**显式登记 + 让它可被查询**，不让它以"静默通过"的形式留在生产代码里。
+    /// QA 的职责是：把冲突**显式登记 + 让它可被查询**，不让它以「静默通过」的形式留在生产代码里。
     /// </summary>
     public sealed class SpecConflict
     {
@@ -289,7 +284,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v2.0.md §5 表 5 movement_curve：keys[], distance, clampMode",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
                 Impact = "A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果与**判别力论证**见 D-13。",
-                Resolution = "Resolved · **落逐帧速度（m/s，非归一化）**。两票一致：主理人裁定 + 设计线已撤回归一化方案（美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。测试侧把口径固化为 CurveSemantics.Current = SpeedMetersPerSecond，归一化口径在枚举里保留为已归档的备选方案。"
+                Resolution = "Resolved · **落逐帧速度（m/s，非归一化）**，两票一致（主理人裁定 + 设计线已撤回归一化方案：美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。QA 独立推出的判别力论证与之同源。**归一化路径已删除**（两套长期并存就是第三个真值源）；保留 CurveSemantics 开关作为「美术若改单位语义时可一键切回评估」的回退点。"
             },
             new SpecConflict
             {
@@ -352,7 +347,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v2.0.md §5 断言 A29：连段模拟不产生负资源",
                 SourceB = "GDD-v1.0.md §9.1 / IMPL-v2.0.md §9.1：锋芒上限 5 层、命中按表给层单次 ≤1、8 秒未获新层则每 2 秒掉 1 层",
                 Impact = "没有规定连段序列与时间步长，A29 的执行结果不可复现——不同的模拟序列会得出相反的结论（同一串招在 8 秒内打完不衰减，拖过 8 秒就衰减）。判据必须先固定一条**标准连段序列 + 时间步长**，否则它是不可判定的。",
-                Resolution = "Registered · 待裁：A29「连段模拟」没有定义模拟序列与时间步长 → 判据不可复现。需给出一条标准连段序列（含资源给层与 8 秒衰减的时间步长），或明确 A29 由生产侧按指定序列执行。"
+                Resolution = "Resolved · 判据侧定义**固定的标准连段序列 + 固定时间步长**（IMPL §2.1 熟练链为主序列、新手链为最小序列；步长逻辑 60Hz；模拟 600 帧；**顿帧帧也要跑**——顿帧不暂停 tick，8 阶段照常推进、PhaseFrame 继续走）；生产侧可用自己的序列，但必须记录种子与帧数、可回放。理由：A29 的目的是验「状态机不会产生非法状态」，不是验「某一条连段能跑通」；序列只要固定且可复现，判据就有着力点，**标准序列是基线，不是唯一合法输入**（绑死一条序列会让另一条合法连段被误杀）。已落：判据 F-HOLD/A29 之外新增字段 ComboSequence / ComboSimulationFrames / ComboFrameDeltaSeconds / ComboHitstopFrames，负向注入 S-16（连段模拟没跑顿帧帧 → A29 报红）。"
             },
             new SpecConflict
             {
@@ -397,7 +392,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "生产侧 EdgeChronicles.Data.CurveKey.value 的注释：归一化速度（0–1）",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
                 Impact = "A24 目前没有唯一算法：不同实现会算出不同偏差值。**决定性证据：占比口径会让 A24 变成永远报绿的废判据**——占比口径下积分距离 = distance × Σkeys，而 A24 恰好要求 Σkeys ≈ 1，于是 A24 等价于另一条断言「Σkeys = 1」，**声明距离不再是可判的量**（把 distance 改成任何值，偏差都是 0%）。速度口径下积分由 keys 独立算出（与声明距离无关），A24 才有判别力。测试侧两种口径都实现（CurveSemantics.Current 开关），任一口径下 43 条负向注入全部符合预期。",
-                Resolution = "Resolved · **落逐帧速度（m/s，非归一化）**。两票一致：主理人裁定 + 设计线已撤回归一化方案（美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。测试侧把口径固化为 CurveSemantics.Current = SpeedMetersPerSecond，归一化口径在枚举里保留为已归档的备选方案。"
+                Resolution = "Resolved · **落逐帧速度（m/s，非归一化）**，两票一致（主理人裁定 + 设计线已撤回归一化方案：美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。QA 独立推出的判别力论证与之同源。**归一化路径已删除**（两套长期并存就是第三个真值源）；保留 CurveSemantics 开关作为「美术若改单位语义时可一键切回评估」的回退点。"
             }
         };
 

@@ -72,27 +72,29 @@ namespace EdgeChronicles.Tests.Criteria
         }
 
         [Test]
-        public void A24_曲线基线在两种keys口径下都合法()
+        public void A24_曲线基线在终裁口径下合法()
         {
-            // 【D-02 / D-13】两条裁定冲突（逐帧速度 m/s vs 逐帧归一化位移占比 Σ=1）。
-            // 判据的**形式**两边一致，只有积分算法不同 → 所以基线必须在两种口径下都合法。
-            CurveKeySemantics saved = CurveSemantics.Current;
-            try
-            {
-                foreach (CurveKeySemantics sem in new[] { CurveKeySemantics.SpeedMetersPerSecond, CurveKeySemantics.NormalizedDistanceShare })
-                {
-                    CurveSemantics.Current = sem;
-                    QaScenario s = ScenarioFactory.LegalBaseline();
-                    CriterionVerdict verdict = CriterionOracle.Evaluate(s);
-                    Assert.IsEmpty(verdict.Fired,
-                        "曲线口径 " + sem + " 下基线不合法：" + verdict
-                        + "。两种口径都必须合法，裁定落哪边只改开关，不改判据。");
-                }
-            }
-            finally
-            {
-                CurveSemantics.Current = saved;
-            }
+            // 【D-02 / D-13 终裁】只保留逐帧速度（m/s）一种口径 ——
+            // 两套长期并存就是第三个真值源；归一化路径已删除。
+            // 保留 `CurveSemantics` 这个开关本身，是为了将来美术若改了 MP_HERO_* 的单位语义，
+            // 一个开关就能切回去重新评估 —— 那是一个回退点，不是两套判据。
+            QaScenario s = ScenarioFactory.LegalBaseline();
+            CriterionVerdict verdict = CriterionOracle.Evaluate(s);
+            Assert.IsEmpty(verdict.Fired, "终裁口径（逐帧速度 m/s）下基线不合法：" + verdict);
+            Assert.AreEqual(CurveKeySemantics.SpeedMetersPerSecond, CurveSemantics.Current,
+                "曲线口径必须是终裁的逐帧速度（m/s）。");
+        }
+
+        [Test]
+        public void A29_连段模拟跑过顿帧帧且帧数够长()
+        {
+            // 【D-09 裁定】固定的标准连段序列 + 固定时间步长（60Hz，600 帧）+ 顿帧帧也要跑。
+            // A29 的目的是验「状态机不会产生非法状态」，不是验「某一条连段能跑通」。
+            QaScenario s = ScenarioFactory.LegalBaseline();
+            Assert.AreEqual(600, s.ComboSimulationFrames, "标准连段模拟帧数应为 600。");
+            Assert.AreEqual(1f / CombatSpec.LogicFps, s.ComboFrameDeltaSeconds, 1e-6f, "步长应为逻辑 60Hz。");
+            Assert.Greater(s.ComboHitstopFrames, 0, "连段模拟必须跑过顿帧帧（顿帧不暂停 tick）。");
+            Assert.AreEqual(8, s.ComboSequence.Count, "主序列（熟练链）应覆盖 8 个技能。");
         }
 
         [Test]

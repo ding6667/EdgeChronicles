@@ -264,6 +264,17 @@ namespace EdgeChronicles.Tests.Qa
             s.D5ControlEliminatedEntryTiming = true;
 
             s.ResourceAfterCombo = 0;
+
+            // ── D-09 标准连段序列（IMPL §2.1）──
+            // 主序列 = 熟练链（覆盖 8 技能）：缚锋定身 → 聚锋 → 裂石 → 拾锋式 → 破锋 → 抱元 → 回锋 → 二次拾锋式
+            // 最小序列 = 新手链：迅锋三段 → 拾锋式 → 域内迅锋 → 破锋
+            s.ComboSequence.AddRange(new List<string>
+            {
+                "control", "channel", "heavy", "core", "finisher", "guard", "dash", "core"
+            });
+            s.ComboSimulationFrames = 600;
+            s.ComboFrameDeltaSeconds = 1f / CombatSpec.LogicFps;
+            s.ComboHitstopFrames = 12;
             s.BladeLightOcclusionRatio = 0.18f;
             s.BladeLightScreenCoverageRatio = 0.005f; // 竖直刀光在俯视角下投影很小——正是 B-01 要防的误杀
             return s;
@@ -300,15 +311,8 @@ namespace EdgeChronicles.Tests.Qa
             for (int i = 0; i < keyCount; i++)
             {
                 float share = shape[i] / sum;
-                if (CurveSemantics.Current == CurveKeySemantics.SpeedMetersPerSecond)
-                {
-                    // 逐帧速度 m/s：share × 声明距离 ÷ dt
-                    c.Keys.Add(share * declaredDistance * scaleFactor / CurveSemantics.DtSeconds);
-                }
-                else
-                {
-                    c.Keys.Add(share * scaleFactor);
-                }
+                // 逐帧速度 m/s：share × 声明距离 × scaleFactor ÷ dt（终裁口径，唯一一种）
+                c.Keys.Add(share * declaredDistance * scaleFactor / CurveSemantics.DtSeconds);
             }
             return c;
         }
@@ -843,6 +847,10 @@ namespace EdgeChronicles.Tests.Qa
                 PushWindowRatioMax = src.Dodge.PushWindowRatioMax
             };
             s.ResourceAfterCombo = src.ResourceAfterCombo;
+            s.ComboSequence = new List<string>(src.ComboSequence);
+            s.ComboSimulationFrames = src.ComboSimulationFrames;
+            s.ComboFrameDeltaSeconds = src.ComboFrameDeltaSeconds;
+            s.ComboHitstopFrames = src.ComboHitstopFrames;
             s.InputTimestampPipelinesIndependent = src.InputTimestampPipelinesIndependent;
             s.InjectedInputLatencyFrames = src.InjectedInputLatencyFrames;
             s.MeasuredInputLatencyMs = src.MeasuredInputLatencyMs;

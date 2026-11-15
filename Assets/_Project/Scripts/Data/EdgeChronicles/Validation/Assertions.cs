@@ -1228,7 +1228,7 @@ namespace EdgeChronicles.Data.Validation
                 if (!EffectMerge.IsCapKey(pair.Key)) continue;
                 checkedKeys++;
                 // 多个来源同时给上限时，取最大倍率（不是叠加）
-                float result = EffectMerge.Merge(pair.Key, 1f, pair.Values);
+                float result = EffectMerge.Merge(pair.Key, 1f, pair.Value);
                 if (float.IsNaN(result) || float.IsInfinity(result))
                 {
                     report.Error("A39-1", null, pair.Key, "effect_key", "上限类合并结果非法：" + result);
@@ -1256,7 +1256,7 @@ namespace EdgeChronicles.Data.Validation
             {
                 if (!EffectMerge.IsReduceKey(pair.Key)) continue;
                 checkedKeys++;
-                float result = EffectMerge.Merge(pair.Key, 1f, pair.Values);
+                float result = EffectMerge.Merge(pair.Key, 1f, pair.Value);
                 if (float.IsNaN(result) || float.IsInfinity(result))
                 {
                     report.Error("A39-2", null, pair.Key, "effect_key", "消耗类合并结果非法：" + result);
@@ -1284,7 +1284,7 @@ namespace EdgeChronicles.Data.Validation
             {
                 if (EffectMerge.IsCapKey(pair.Key) || EffectMerge.IsReduceKey(pair.Key)) continue;
                 checkedKeys++;
-                float result = EffectMerge.Merge(pair.Key, 0f, pair.Values);
+                float result = EffectMerge.Merge(pair.Key, 0f, pair.Value);
                 if (float.IsNaN(result) || float.IsInfinity(result))
                 {
                     report.Error("A39-3", null, pair.Key, "effect_key", "数值类合并结果非法：" + result);
