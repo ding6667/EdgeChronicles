@@ -1,0 +1,14 @@
+{
+    "name": "EdgeChronicles.Flow",
+    "rootNamespace": "EdgeChronicles.Flow",
+    "references": ["EdgeChronicles.Core","EdgeChronicles.Data","EdgeChronicles.Kernel","EdgeChronicles.Binding","EdgeChronicles.Presentation","EdgeChronicles.UI"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

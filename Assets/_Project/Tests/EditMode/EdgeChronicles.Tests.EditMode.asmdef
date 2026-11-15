@@ -1,0 +1,20 @@
+{
+    "name": "EdgeChronicles.Tests.EditMode",
+    "rootNamespace": "EdgeChronicles.Tests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "EdgeChronicles.Core",
+        "EdgeChronicles.Data",
+        "EdgeChronicles.Kernel"
+    ],
+    "includePlatforms": [ "Editor" ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [ "nunit.framework.dll" ],
+    "autoReferenced": false,
+    "defineConstraints": [ "UNITY_INCLUDE_TESTS" ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

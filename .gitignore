@@ -1,0 +1,54 @@
+# Unity 生成
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# IDE 生成
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.vs/
+.vscode/
+.idea/
+*.code-workspace
+
+# 生成的数据与构建物（导表器产物不入库，只入库源 CSV/JSON 与断言）
+/Assets/Generated/
+/Assets/_Project/Data/*.json
+/Tools/ci/results*.xml
+/Tools/ci/*.log
+*.orig
+*.rej
+
+# Unity 临时
+*.tmp
+/Assets/AssetStoreTools*
+
+# 密钥与本地配置
+.env
+.env.*
+*.key
+*.keystore
+*.p12
+*.mobileprovision
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini

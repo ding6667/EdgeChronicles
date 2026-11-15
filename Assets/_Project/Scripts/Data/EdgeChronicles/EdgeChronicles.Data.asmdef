@@ -1,0 +1,14 @@
+{
+    "name": "EdgeChronicles.Data",
+    "rootNamespace": "EdgeChronicles.Data",
+    "references": ["EdgeChronicles.Core"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
