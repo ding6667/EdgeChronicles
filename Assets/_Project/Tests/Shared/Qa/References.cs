@@ -289,7 +289,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v2.0.md §5 表 5 movement_curve：keys[], distance, clampMode",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
                 Impact = "A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果与**判别力论证**见 D-13。",
-                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关"
+                Resolution = "Resolved · **落逐帧速度（m/s，非归一化）**。两票一致：主理人裁定 + 设计线已撤回归一化方案（美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。测试侧把口径固化为 CurveSemantics.Current = SpeedMetersPerSecond，归一化口径在枚举里保留为已归档的备选方案。"
             },
             new SpecConflict
             {
@@ -357,11 +357,11 @@ namespace EdgeChronicles.Tests.Qa
             new SpecConflict
             {
                 Id = "D-14",
-                Summary = "hold 的区间端点 2.0 / 4.0 帧在 time_scale = 0.15 下**不可达**：hold = 整数(硬直) − 整数(clip_W) − hitstop×0.85，而 0.85 × {2,4,6} = {1.7, 3.4, 5.1}，故 hold 的小数部分恒为 .3 / .6 / .7，永不等于 2.0 或 4.0。",
+                Summary = "hold 的区间端点 2.0 / 4.0 帧在 time_scale = 0.15 下**不可达**：hold = 整数(硬直) − 整数(clip_W) − hitstop×0.85，而 0.85 × {2,4,6} = {1.7, 3.4, 5.1}，故 hold 的小数部分恒为 .3 / .6 / .9（轻/中/重），永不等于 2.0 或 4.0。",
                 SourceA = "GDD-v1.0.md §9.4 导表硬断言 #11：hold ∈ [2,4]（闭区间写法）",
                 SourceB = "【D-04 裁定】hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)，time_scale = 0.15",
-                Impact = "闭区间判据的「端点归属」这条性质**在 hold 上无法被验证**——不存在任何合法取值能取到端点。后果：① 「区间含端点」这条通用规则在 hold 上是空转；② 判据的实际有效范围是 [2.3, 3.9] 之类的离散可达值集合，而文档写的是 [2,4]，两者不等价。修正方向二选一：把 hold 规格改成可达值集合，或把 time_scale 改成能让 hold 落在整帧上的值（如 0.2 → 0.8×hitstop，hitstop=2 → 1.6，仍不可达……需另行裁定），**不得**为了好看把断言改成开区间来「规避」这个问题。",
-                Resolution = "Registered"
+                Impact = "闭区间判据的「端点归属」这条性质**在 hold 上无法被验证**——不存在任何合法取值能取到端点（但这不构成问题：判据要区分的是「在区间内 vs 在区间外」，而低于下限与高于上限的可达值都存在）。后果：① 「区间含端点」这条通用规则在 hold 上是空转；② 判据的实际有效范围是 [2.3, 3.9] 之类的离散可达值集合，而文档写的是 [2,4]，两者不等价。修正方向二选一：把 hold 规格改成可达值集合，或把 time_scale 改成能让 hold 落在整帧上的值（如 0.2 → 0.8×hitstop，hitstop=2 → 1.6，仍不可达……需另行裁定），**不得**为了好看把断言改成开区间来「规避」这个问题。",
+                Resolution = "Resolved · **第三条路**（主理人裁定）：① hold 规格表述改准 ——「hold ∈ [2,4]」是设计意图区间，实测值落在 3.3–3.9，两句都要写（只写区间会让人以为能取到端点；只写实况会让人以为区间多余）；② 负向用例改用「低于下限的可达值」(hold = 1.3) 与「高于上限的可达值」(hold = 4.8)，不用恰好等于端点；③ 新增断言 F-HOLD-REACHABLE：保证上下限永远可测（构造空间被收窄时它会红并提醒更新负向用例）。**不调 time_scale、不改取整口径、不改区间开闭** —— 那三样都是为了让测试好写而动产品的物理量，而 hold 的物理量今天是对的。"
             }
             new SpecConflict
             {
@@ -397,7 +397,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "生产侧 EdgeChronicles.Data.CurveKey.value 的注释：归一化速度（0–1）",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
                 Impact = "A24 目前没有唯一算法：不同实现会算出不同偏差值。**决定性证据：占比口径会让 A24 变成永远报绿的废判据**——占比口径下积分距离 = distance × Σkeys，而 A24 恰好要求 Σkeys ≈ 1，于是 A24 等价于另一条断言「Σkeys = 1」，**声明距离不再是可判的量**（把 distance 改成任何值，偏差都是 0%）。速度口径下积分由 keys 独立算出（与声明距离无关），A24 才有判别力。测试侧两种口径都实现（CurveSemantics.Current 开关），任一口径下 43 条负向注入全部符合预期。",
-                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关"
+                Resolution = "Resolved · **落逐帧速度（m/s，非归一化）**。两票一致：主理人裁定 + 设计线已撤回归一化方案（美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。测试侧把口径固化为 CurveSemantics.Current = SpeedMetersPerSecond，归一化口径在枚举里保留为已归档的备选方案。"
             }
         };
 

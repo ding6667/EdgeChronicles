@@ -168,7 +168,7 @@ namespace EdgeChronicles.Tests.Qa
             {
                 Id = "WC-09",
                 Title = "受击三档的硬直 / hold / 顿帧",
-                Statement = "轻 / 中 / 重三档：硬直 18 / 20 / 22 帧，顿帧 2 / 4 / 6 帧（帧，W 轴）。hold 落在 [2,4] 帧，按**同轴**公式重算：clip_W = anim_clip_length × 60 ÷ anim_fps，hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)；换算后 hold < 0 即报错（不取 0）。顿帧上限以因果式判定：hitstop_time_scale × hitstop_frames ≤ 1。",
+                Statement = "轻 / 中 / 重三档：硬直 18 / 20 / 22 帧，顿帧 2 / 4 / 6 帧（帧，W 轴）。hold 的**设计意图区间**是 [2,4] 帧（三档实测落在 3.3–3.9 帧；区间与实况两句都要写，否则会误以为能取到端点），按**同轴**公式重算：clip_W = anim_clip_length × 60 ÷ anim_fps，hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)；换算后 hold < 0 即报错（不取 0）。顿帧上限以因果式判定：hitstop_time_scale × hitstop_frames ≤ 1。",
                 Unit = QaUnit.Frame, Axis = QaClockAxis.WallClock,
                 Executability = CriterionExecutability.AutoScript,
                 ExecutableAs = "SC-08（判据 F-HOLD + F-HITSTOP-CAUSAL）",
@@ -733,7 +733,8 @@ namespace EdgeChronicles.Tests.Qa
             list.Add(CriterionOracle.A334); list.Add(CriterionOracle.A335); list.Add(CriterionOracle.A35);
             list.Add(CriterionOracle.A391); list.Add(CriterionOracle.A392);
             list.Add(CriterionOracle.A40); list.Add(CriterionOracle.A43);
-            list.Add(CriterionOracle.FHold); list.Add(CriterionOracle.FHitstopCausal);
+            list.Add(CriterionOracle.FHold); list.Add(CriterionOracle.FHoldReachable);
+            list.Add(CriterionOracle.FHitstopCausal);
             list.Add(CriterionOracle.FRecoveryGap); list.Add(CriterionOracle.FKbTier);
             list.Add(CriterionOracle.FKbPeak); list.Add(CriterionOracle.FDodgeInvuln);
             list.Add(CriterionOracle.FVfxStructure); list.Add(CriterionOracle.FPulseHz);

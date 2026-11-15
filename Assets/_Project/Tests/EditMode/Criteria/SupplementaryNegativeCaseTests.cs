@@ -139,7 +139,8 @@ namespace EdgeChronicles.Tests.Criteria
             CriterionOracle.A21, CriterionOracle.A21, CriterionOracle.A23, CriterionOracle.A24,
             CriterionOracle.A25, CriterionOracle.A26, CriterionOracle.A27, CriterionOracle.A28,
             CriterionOracle.A29, CriterionOracle.A30, CriterionOracle.A35,
-            CriterionOracle.A391, CriterionOracle.A392
+            CriterionOracle.A391, CriterionOracle.A392,
+            CriterionOracle.FHold, CriterionOracle.FHold
         };
 
         private static readonly string[] Ids =

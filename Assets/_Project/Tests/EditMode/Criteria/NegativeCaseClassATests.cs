@@ -91,10 +91,12 @@ namespace EdgeChronicles.Tests.Criteria
                     s.InputTimestampPipelinesIndependent = false;
                     return;
 
-                case "NC-A15": // hold 过短（受击剪辑变长 → clip_W 变大 → hold 变小）
+                case "NC-A15": // hold 低于下限（可达值 1.3）
                     // 【D-04 口径】hold = hitstun − clip_W − hitstop × (1 − time_scale)
+                    // 【D-14 第三条路】负向用例必须用**可达**值，不能用恰好等于端点的 2.0：
                     // 13 C 帧 @60fps → clip_W = 13 → 18−13−1.7 = 3.3；
-                    // 改成 15 C 帧 → 18−15−1.7 = 1.3 < 2 → 必须报红。
+                    // 改成 15 C 帧 → 18−15−1.7 = **1.3** < 2 → 必须报红。
+                    // 与 S-14（高于上限的可达值 4.8）配对；判据 F-HOLD-REACHABLE 保证这两个着力点永远存在。
                     for (int i = 0; i < s.Knockbacks.Count; i++)
                     {
                         if (s.Knockbacks[i].Tier == KnockbackTier.Light)

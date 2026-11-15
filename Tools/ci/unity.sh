@@ -94,9 +94,46 @@ resolve_unity() {
 }
 
 # 工程是否被占用（Unity Editor 打开中）。占用时 batchmode 必然失败。
+#
+# 注意：`Temp/UnityLockfile` 在 Editor 被强杀 / 崩溃后会**残留**，
+# 只看「文件是否存在」会把「没开 Editor」误判成「工程被占用」。
+# 因此这里做两级判定：
+#   ① 文件不存在 → 一定没占用；
+#   ② 文件存在 → 尝试**独占打开**（FileShare.None）：
+#      打不开 = 真被 Unity 持锁（占用）；打得开 = 残留锁文件（不占用）。
 is_project_locked() {
   local root="$1"
-  [ -f "$root/Temp/UnityLockfile" ]
+  local lockfile="$root/Temp/UnityLockfile"
+  [ -f "$lockfile" ] || return 1
+
+  local python
+  for python in python3 python; do
+    if command -v "$python" >/dev/null 2>&1; then
+      "$python" - "$lockfile" <<'PY' >/dev/null 2>&1
+import sys
+try:
+    f = open(sys.argv[1], 'r+b')
+except OSError:
+    sys.exit(1)
+try:
+    import os
+    os.close(f.fileno())
+except Exception:
+    pass
+sys.exit(0)
+PY
+      # 退出码 0 = 独占打开成功 = 残留锁文件；1 = 被占用
+      return $?
+    fi
+  done
+
+  # 没有 python：退回「进程在否」的粗判
+  if command -v tasklist >/dev/null 2>&1; then
+    if tasklist //FI "IMAGENAME eq Unity.exe" 2>/dev/null | grep -qi "Unity.exe"; then
+      return 0
+    fi
+  fi
+  return 1
 }
 
 # 统一的「工程被占用」提示；返回 3（区别于 2 = 找不到 Unity）
