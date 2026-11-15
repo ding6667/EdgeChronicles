@@ -37,6 +37,15 @@ namespace EdgeChronicles.Data.Tables
         /// <summary>效果系数（0.01–1.00；与 mechanic_mod 互斥）。</summary>
         public float effect_value;
 
+        /// <summary>
+        /// 节点类型（离散 / 次数 / 帧 / 机制）——<b>手填</b>。
+        /// <para>
+        /// 它是 C6 复算消耗的必需输入（类型系数：离散 / 帧 = 1，次数 / 机制 = 2），
+        /// 不能靠效果键字符串反推——那是把设计内容藏进命名里，换个键名就静默算错。
+        /// </para>
+        /// </summary>
+        public string node_type;
+
         /// <summary>机制修改项（机制类节点用；与 effect_key 互斥；空串 = 无）。</summary>
         public string mechanic_mod;
 
@@ -179,6 +188,20 @@ namespace EdgeChronicles.Data.Tables
 
         /// <summary>前置节点 id 列表（0–3 项）。</summary>
         public string[] prereq_ids;
+
+        /// <summary>
+        /// 拓扑角色（分支 / 叶 / 枢纽）——<b>手填</b>，是 C6 复算消耗的必需输入（角色系数 1 / 3 / 9）。
+        /// </summary>
+        public string node_role;
+
+        /// <summary>
+        /// 叶序系数（同一分支下的第 k 个叶 = k）——<b>手填</b>。
+        /// <para>
+        /// 必须是显式数据：按 node_id 排序去推叶序会与设计线定的顺序不一致（破脉·省 = 1、破脉·连 = 2），
+        /// 而排序结果一变，消耗就静默错位。
+        /// </para>
+        /// </summary>
+        public int leaf_order;
 
         /// <summary>机制修改项（空串 = 无）。</summary>
         public string mechanic_mod;

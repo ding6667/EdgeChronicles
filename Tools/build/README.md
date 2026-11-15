@@ -65,6 +65,7 @@ bash Tools/build/lint-assets.sh --tier low
 | `--unity <路径>` | Unity 可执行 | `UNITY_PATH` 环境变量 → 自动扫描 |
 | `--scenes "<a,b>"` | 指定构建场景 | 读 `EditorBuildSettings` |
 | `--non-strict` | 关闭严格门控（仅开发包） | 严格 |
+| `--allow-dirty` | 允许在非干净工作树上出包（**只放宽溯源这一项**，URP/场景等质量门控仍严格） | 不允许 |
 | `--no-stage-entrypoint` | 禁止注入构建入口 | 允许注入 |
 | `--dry-run` | 只预检与打印计划 | — |
 
@@ -166,6 +167,28 @@ bash Tools/build/build-player.sh --tier low
 ```
 
 退出码 3。**不会**伪装成构建成功。
+
+**陈旧锁的处理**：Unity 被强杀或 batchmode 异常退出后会残留 **0 字节的** `Temp/UnityLockfile`，
+此时其实**没有** Unity 在跑，但仅凭锁文件判定会把出包白白堵死。
+所以占用判定改成**进程优先**（`tasklist` 查 `Unity.exe` / `pgrep`），只有查不到进程工具时才退回锁文件；
+另外「无 Unity 进程却留着锁文件」会被识别为**陈旧锁**，构建前清掉并明确告警。
+
+### 5.1b 为什么有 `--allow-dirty`
+
+并行工作树天然是脏的。**脏是溯源问题**（记录即可），**不是构建质量问题**（必须拦）。
+严格模式整包拒绝，会让「有东西可验」和「可交付」二选一 —— 而这两件事应该同时成立。
+
+`--allow-dirty` 的边界很窄：
+
+| 项 | 严格模式 | `--allow-dirty` |
+|---|---|---|
+| 工作树非干净 | **拒绝出包** | 放行，manifest 记 `source.dirty: true` |
+| Unity 版本与工程不符 | 拒绝 | **仍然拒绝** |
+| 渲染管线不是 URP | 拒绝 | **仍然拒绝** |
+| 没有登记构建场景 | 拒绝 | **仍然拒绝** |
+| 产物与 manifest 校验和不符 | 拒绝 | **仍然拒绝** |
+
+**正式发行（打 tag）不得用 `--allow-dirty`** —— 发行包必须能唯一对应到一个 commit。
 
 ### 5.2 CI 入口预检：`-executeMethod` 指向的类型必须真实存在
 

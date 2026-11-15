@@ -211,6 +211,7 @@ bash Tools/build/verify-artifact.sh Build/low-il2cpp-win64
 | `没有可用的 Unity 许可证来源` | secret 没设 | 设 `UNITY_LICENSE`（或三个账号 secret） |
 | `ULF 许可证无处可写` | 用户级与机器级目录都写不了 | 改用账号方式激活（`UNITY_EMAIL` + `UNITY_PASSWORD` + `UNITY_SERIAL`） |
 | `Unity Editor 正占用本工程` | runner 机器上开着 Unity 编辑器 | 关掉编辑器；runner 机器不要开 Unity |
+| 同上，但 `tasklist` 里**没有** Unity.exe | Unity 异常退出留下的**陈旧锁**（0 字节的 `Temp/UnityLockfile`） | 出包脚本会自动识别并清理陈旧锁；若在 `Tools/ci/unity.sh` 里遇到同样判据，建议改成**进程优先**（锁文件只作退路），否则 CI 会持续误判「工程被占用」 |
 | `缺少 LFS 二进制资产` / 出现 LFS 指针 | LFS 没拉下来 | `git lfs install` 后 `git lfs pull`；确认 runner 上装了 Git LFS |
 | `包体超过档位上限` | 产物超过基线 `limits.buildSizeMB` | 对照 `build-manifest.json` 的 `payload.sizeMB` 与基线；该档位不合适就换档位出包 |
 | `资产 Gate 未通过` | 有 `[LINT] FAIL` | 看 `Logs/lint-assets.log` 里的 `[LINT] FAIL` 行，逐条修 |

@@ -26,6 +26,10 @@
 | 1 | `VERSION` 已更新 | 文件内容符合 `MAJOR.MINOR.PATCH[-预发布]` | `cat VERSION` |
 | 2 | `CHANGELOG.md` 有本次版本条目 | 顶部存在 `## [<VERSION>]` 段 | `head -40 CHANGELOG.md` |
 | 3 | 工作树干净 | `git status --porcelain` 输出为空 | `git status --porcelain` |
+
+> **发行包必须走严格模式**（工作树非干净 → 拒绝出包）。
+> 开发期自测包可用 `--allow-dirty` 出，manifest 会记 `source.dirty: true`；
+> 但带 `dirty: true` 的包**不得进入分发与归档**。
 | 4 | 代码已入库 | `git rev-parse HEAD` 与远端一致 | `git log -1 --format=%H` |
 | 5 | 合并冲突标记已清 | 仓库内无 `<<<<<<<` / `>>>>>>>` | `git grep -n '<<<<<<<' -- . \| wc -l` 为 0 |
 

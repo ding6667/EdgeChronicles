@@ -390,6 +390,12 @@ namespace EdgeChronicles.Data
         /// <summary>取消窗口形态的合法值。</summary>
         public static readonly string[] CancelModeValues = { "blocked", "on_hit_only" };
 
+        /// <summary>星盘节点类型的合法值。</summary>
+        public static readonly string[] StarNodeTypeValues = { "discrete", "count", "frame", "mechanic" };
+
+        /// <summary>络脉拓扑角色的合法值。</summary>
+        public static readonly string[] MeridianRoleValues = { "branch", "leaf", "hub" };
+
         /// <summary>取技传解锁类型。</summary>
         public static TechUnlockType ParseTechUnlockType(string value)
         {
