@@ -356,20 +356,19 @@ namespace EdgeChronicles.Tests.Qa
                 if (t5 == null || t5.UnlockType != "mechanic") { v.Add(A33); }
             }
 
-            // A33-1：双向承载（tech_skill.unlock_derivative_id ⇄ skill.derivative_ids）
+            // A33-1：双向承载（派生条目的 id ⇄ skill.derivative_ids）
             var skillById = new Dictionary<string, QaSkillRow>(StringComparer.Ordinal);
             for (int i = 0; i < s.Skills.Count; i++) { skillById[s.Skills[i].Id] = s.Skills[i]; }
             var declared = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-            for (int i = 0; i < s.Derivatives.Count; i++)
+            for (int i = 0; i < s.DerivativeEffects.Count; i++)
             {
-                QaDerivativeRow d = s.Derivatives[i];
-                if (string.IsNullOrEmpty(d.UnlockDerivativeId)) { continue; }
+                QaDerivativeEffectRow e = s.DerivativeEffects[i];
                 List<string> lst;
-                if (!declared.TryGetValue(d.SkillId, out lst)) { lst = new List<string>(); declared[d.SkillId] = lst; }
-                lst.Add(d.UnlockDerivativeId);
+                if (!declared.TryGetValue(e.SkillId, out lst)) { lst = new List<string>(); declared[e.SkillId] = lst; }
+                lst.Add(e.DerivativeId);
 
                 QaSkillRow sk;
-                if (skillById.TryGetValue(d.SkillId, out sk) && !sk.DerivativeIds.Contains(d.UnlockDerivativeId))
+                if (skillById.TryGetValue(e.SkillId, out sk) && !sk.DerivativeIds.Contains(e.DerivativeId))
                 {
                     v.Add(A331);
                 }
@@ -385,48 +384,48 @@ namespace EdgeChronicles.Tests.Qa
                 }
             }
 
-            // A33-2：每技能至多 2 条派生，且派生只能落在 tier 3 / 5
+            // A33-2：每技能至多 2 条派生条目；【D-03 裁定】派生可落在 1 / 2 / 3 / 5 阶
+            // （当前 8 条落在 2 / 3 / 5 阶；"派生只能落在 3/5 阶"是错的）。
             var perSkill = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (int i = 0; i < s.Derivatives.Count; i++)
+            for (int i = 0; i < s.DerivativeEffects.Count; i++)
             {
-                QaDerivativeRow d = s.Derivatives[i];
-                if (string.IsNullOrEmpty(d.UnlockDerivativeId)) { continue; }
+                QaDerivativeEffectRow e = s.DerivativeEffects[i];
                 int cnt;
-                perSkill.TryGetValue(d.SkillId, out cnt);
-                perSkill[d.SkillId] = cnt + 1;
-                // 【D-03 裁定】派生可落在 1 / 2 / 3 / 5 阶（当前 8 条落在 2 / 3 / 5）。
-                if (d.Tier != 1 && d.Tier != 2 && d.Tier != 3 && d.Tier != 5) { v.Add(A332); }
+                perSkill.TryGetValue(e.SkillId, out cnt);
+                perSkill[e.SkillId] = cnt + 1;
+                if (e.Tier != 1 && e.Tier != 2 && e.Tier != 3 && e.Tier != 5) { v.Add(A332); }
             }
             foreach (KeyValuePair<string, int> kv in perSkill)
             {
                 if (kv.Value > 2) { v.Add(A332); }
             }
 
-            // A33-3：裂石 / 回锋 的派生列必须全空
+            // A33-3：裂石 / 回锋 不允许有派生条目
+            for (int i = 0; i < s.DerivativeEffects.Count; i++)
+            {
+                QaDerivativeEffectRow e = s.DerivativeEffects[i];
+                if (e.SkillId == "sk_lieshi" || e.SkillId == "sk_huifeng") { v.Add(A333); }
+            }
+
+            // A33-4：unlock_type=derivative ∧ visual_tier=new_graphic 的阶位 ⇒ 必须挂了派生条目
             for (int i = 0; i < s.Derivatives.Count; i++)
             {
                 QaDerivativeRow d = s.Derivatives[i];
-                if ((d.SkillId == "sk_lieshi" || d.SkillId == "sk_huifeng") && !string.IsNullOrEmpty(d.UnlockDerivativeId))
+                if (d.UnlockType != "derivative" || d.VisualTier != "new_graphic") { continue; }
+                bool hasEffect = false;
+                for (int e = 0; e < s.DerivativeEffects.Count; e++)
                 {
-                    v.Add(A333);
+                    QaDerivativeEffectRow eff = s.DerivativeEffects[e];
+                    if (eff.SkillId == d.SkillId && eff.Tier == d.Tier) { hasEffect = true; break; }
                 }
+                if (!hasEffect) { v.Add(A334); }
             }
 
-            // A33-4：unlock_type=derivative ∧ visual_tier=new_graphic ⇒ 必须有 id
-            for (int i = 0; i < s.Derivatives.Count; i++)
-            {
-                QaDerivativeRow d = s.Derivatives[i];
-                if (d.UnlockType == "derivative" && d.VisualTier == "new_graphic" && string.IsNullOrEmpty(d.UnlockDerivativeId))
-                {
-                    v.Add(A334);
-                }
-            }
-
-            // A33-5：new_graphic 行数 == 派生清单中标 new_graphic 的条数
+            // A33-5：new_graphic 派生条目数 == 派生清单中标 new_graphic 的条数
             int newGraphicRows = 0;
-            for (int i = 0; i < s.Derivatives.Count; i++)
+            for (int i = 0; i < s.DerivativeEffects.Count; i++)
             {
-                if (s.Derivatives[i].VisualTier == "new_graphic") { newGraphicRows++; }
+                if (s.DerivativeEffects[i].VisualTier == "new_graphic") { newGraphicRows++; }
             }
             if (newGraphicRows != CombatSpec.DerivativeListNewGraphicCount) { v.Add(A335); }
         }
@@ -522,10 +521,12 @@ namespace EdgeChronicles.Tests.Qa
 
         private static void EvalA43(QaScenario s, CriterionVerdict v)
         {
+            // 【拆分模型】new_graphic 计数取**派生条目**（§4.8.5 清单里的那 6 条），
+            // 不是阶位行 —— 阶位行只是"这一阶挂了 new_graphic 派生"。
             int newGraphic = 0;
-            for (int i = 0; i < s.Derivatives.Count; i++)
+            for (int i = 0; i < s.DerivativeEffects.Count; i++)
             {
-                if (s.Derivatives[i].VisualTier == "new_graphic") { newGraphic++; }
+                if (s.DerivativeEffects[i].VisualTier == "new_graphic") { newGraphic++; }
             }
             int generic = s.GlobalTuning.VfxGenericBudget;
             int budget = s.GlobalTuning.VfxGraphicBudget;

@@ -280,7 +280,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v2.0.md §3.1 hitShapes[].angle（无口径说明）",
                 SourceB = "IMPL-v2.0.md §3.4 真实技能样例：sector angle=120",
                 Impact = "命中判定与 Boss 预警范围（哑刀横斩 180° 扇形 3m）会因解释不同而相差一倍；命中几何单测无法给唯一期望值。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 整角（0–360°），120 即 120°；工程侧按「扇形张角」实现，与测试侧参考实现一致"
             },
             new SpecConflict
             {
@@ -289,7 +289,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v2.0.md §5 表 5 movement_curve：keys[], distance, clampMode",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
                 Impact = "A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果见 D-13。",
-                Resolution = "Registered"
+                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关""
             },
             new SpecConflict
             {
@@ -298,7 +298,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v3.0-EL-03-progression.md §2 A33 + A33-2",
                 SourceB = "IMPL-v3.0.md §4.5.4 全 40 阶明细 + §4.5.3 通用派生模板",
                 Impact = "照 A33 实现导表器，会拦掉 §4.5.4 定义的 16 条合法阶位数据；照 §4.5.4 实现，A33 永远报红。二者必有一错。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 判据错、规格对：A33 改为「阶位不变量」（每技能 5 阶恰好覆盖 5 种 unlock_type 各一次；tier 1 恒 stat；tier 5 恒 mechanic；中间 3 阶顺序由技能自定义）；A33-2 的 tier 集合由 {3,5} 放宽为 {1,2,3,5}"
             },
             new SpecConflict
             {
@@ -307,7 +307,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "GDD-v1.0.md §9.4 skill 表：hitstun_hold_duration = hitstun_frames − anim_clip_length − hitstop_frames × (1 − hitstop_time_scale)",
                 SourceB = "GDD-v1.0.md §7.3 时钟轴约定：t(C_i) = (i − 1) 帧，跨轴相减必错",
                 Impact = "公式在 W 轴下算出 3.3 / 3.6 / 3.9，而断言 hold ∈ [2,4] 按此取值成立；一旦剪辑长度改成 12 帧（13→12）即算出 4.3 → 越界。若 hold 语义实为「剩余时长」而非「段长」，则整段判据的物理含义要重写。",
-                Resolution = "Registered"
+                Resolution = "Resolved · hold = 硬直结束时刻 − 收身段结束时刻（只算 hold 不含收身）；公式必须同轴：clip_W = anim_clip_length × 60 ÷ anim_fps 先换算到 W 轴再相减；换算后 hold < 0 报错、不取 0"
             },
             new SpecConflict
             {
@@ -316,7 +316,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "GDD-v1.0.md §9.4 断言 12 展开式：(收身起始进度 − 后段窗口帧数) − hitstop_time_scale × hitstop_frames ≥ 2",
                 SourceB = "GDD-v1.0.md 治理规则 12：上限要写成因果式；且 3 应写成 (收身起始进度 − 后段窗口帧数)",
                 Impact = "收身起始从 C10 挪到 C12 时，硬编码 9 的实现会静默算错——这正是治理规则 12 举的反例本身。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 收身起始是参数（默认 C9）不是常数；后段窗口帧数读击退曲线的派生量（knockback_curve_frames 末段），6 只是当前默认值"
             },
             new SpecConflict
             {
@@ -334,7 +334,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v3.0-EL-03-progression.md §6 工具链前提",
                 SourceB = "ProjectSettings/ProjectVersion.txt、Packages/manifest.json",
                 Impact = "CI 脚本按 6000.0.23f1 找解释器会找不到；URP 14 与 17 的描边 / GBuffer 行为不同，§9.6 视觉通道断言的期望值可能不成立。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 以实装为准：Unity 2022.3.62f3c1 + URP 14.0.11（文档基线 6000.0.23f1 / URP 17 是建议值未实测）；判据期望值按 URP 14 实测校准，不按 URP 17 文档预期"
             },
             new SpecConflict
             {
@@ -343,7 +343,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "Tools/ci/check-progression.sh",
                 SourceB = "Assets/_Project/Editor/EdgeChronicles.Tools.Editor.asmdef（rootNamespace = EdgeChronicles.Tools.Editor）",
                 Impact = "养成数据完整性检查这一条 CI 入口目前必然失败（找不到方法）。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 命名空间已修为 EdgeChronicles.Tools.Editor.Ci.*；残余问题是该门面类尚未建立（属工程侧），并已由 Tools/build/ci-entrypoint-check.sh 做文件级预检"
             },
             new SpecConflict
             {
@@ -356,12 +356,21 @@ namespace EdgeChronicles.Tests.Qa
             },
             new SpecConflict
             {
+                Id = "D-14",
+                Summary = "hold 的区间端点 2.0 / 4.0 帧在 time_scale = 0.15 下**不可达**：hold = 整数(硬直) − 整数(clip_W) − hitstop×0.85，而 0.85 × {2,4,6} = {1.7, 3.4, 5.1}，故 hold 的小数部分恒为 .3 / .6 / .7，永不等于 2.0 或 4.0。",
+                SourceA = "GDD-v1.0.md §9.4 导表硬断言 #11：hold ∈ [2,4]（闭区间写法）",
+                SourceB = "【D-04 裁定】hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)，time_scale = 0.15",
+                Impact = "闭区间判据的「端点归属」这条性质**在 hold 上无法被验证**——不存在任何合法取值能取到端点。后果：① 「区间含端点」这条通用规则在 hold 上是空转；② 判据的实际有效范围是 [2.3, 3.9] 之类的离散可达值集合，而文档写的是 [2,4]，两者不等价。修正方向二选一：把 hold 规格改成可达值集合，或把 time_scale 改成能让 hold 落在整帧上的值（如 0.2 → 0.8×hitstop，hitstop=2 → 1.6，仍不可达……需另行裁定），**不得**为了好看把断言改成开区间来「规避」这个问题。",
+                Resolution = "Registered"
+            }
+            new SpecConflict
+            {
                 Id = "D-10",
                 Summary = "取消窗口的标签口径不一致：8 个技能的 entryTags 为 core/light/heavy/dash/control/guard/channel/finisher，**没有 \"dodge\"**；但 IMPL-v2.0 §3.4 的真实技能样例 cancelWindows.allowTags = [\"light\", \"dodge\"]。",
                 SourceA = "IMPL-v2.0.md §5 断言 A22：cancelWindow 的标签必须存在于某 skill.entryTags",
                 SourceB = "IMPL-v2.0.md §3.4 真实技能样例：allowTags 含 \"dodge\"；IMPL-v3.0.md §1.2 的 8 技能 entryTags 无 dodge（回锋为 dash）",
                 Impact = "照 A22 实现导表器，会把规范里给出的那条真实样例窗口判为非法——判据与唯一真值源自相矛盾。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 判据错、规格对：A22 的判定集合改为「标签全集」= 8 技能 entryTags ∪ 门派共有动作标签 {dodge, attack}；dodge 只作 allowTag，不作 sourceTag"
             },
             new SpecConflict
             {
@@ -370,7 +379,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "生产侧 EdgeChronicles.Core.Vec2：UnitsPerMeter = 100、UnitsPerCentimeter = 1（定点，厘米）",
                 SourceB = "GDD-v1.0.md §7.3 / IMPL-v3.0.md §3.2：击退距离以米声明；本目录全部距离量纲 = m",
                 Impact = "击退距离类判据（F-KB-TIER / F-KB-PEAK / WC-07）若直接与逻辑坐标相减，会把厘米当米 —— 差 100 倍。判据必须显式声明取数口径（逻辑坐标 ÷ 100 = 米），否则结论永远是假的。**判据侧未声明转换即成立**。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 逻辑坐标统一用米，定点精度 1/1000 m（毫米）；改坐标而不是给每个距离判据写换算式"
             },
             new SpecConflict
             {
@@ -379,7 +388,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "生产侧 EdgeChronicles.Data.HitShapeRow.frame 的注释：C 轴帧",
                 SourceB = "IMPL-v2.0.md §5 断言 A20：hitShape.frame < active（active 是相段长度，属逻辑帧）",
                 Impact = "跨轴相减必错。若 frame 真的是剪辑轴帧号而 active 是逻辑帧数，两者的比较在不同实现下会差若干帧 —— A20 可能永远报绿，也可能永远报红。必须裁定 frame 归属哪根时钟，并把比较写成同轴符号式。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 技能相位（startup / active / recovery）统一为墙钟 W 帧；anim_clip_length 是 C 轴只用于算 hold 起点；hit_shape.frame 的轴标注由 C 改为 W，比较变为同轴"
             },
             new SpecConflict
             {
@@ -388,7 +397,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "生产侧 EdgeChronicles.Data.CurveKey.value 的注释：归一化速度（0–1）",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
                 Impact = "A24 目前没有唯一算法：不同实现会算出不同偏差值。本测试侧按**归一化位移占比**实现（积分 = Σ(keys) × 声明距离），并在此登记；若最终裁定为速度，A24 必须重写而不是改阈值。",
-                Resolution = "Registered"
+                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关""
             }
         };
 

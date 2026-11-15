@@ -215,7 +215,7 @@ public interface IAnchorRegistry {
 | A21 | `fromFrame ≤ toFrame < totalFrames` |
 | A22 | `cancel_window` 的标签必须存在于「**8 技能 `entryTags` ∪ {门派共有动作标签}**」——闪避是门派共有动作（IMPL §1.3），它在 8 技能表里没有 `entryTags` 行，但可以取消进入任何技能 |
 | A23 | 每 `skill` ≥1 条 `hitShape` |
-| A24 | `|integralDistance − distance| ÷ distance ≤ 5%`，其中 `integralDistance = Σ(keys_i × dt_i)`（**`keys` = 逐帧速度 m/s**，`dt_i = 1 ÷ 逻辑时钟频率`）；`distance` 手填、`integralDistance` 独立算出，两边互不依赖 |
+| A24 | `\|integralDistance − distance\| ÷ distance ≤ 5%`，其中 `integralDistance = Σ(keys_i × dt_i)`（**`keys` = 逐帧速度 m/s**，`dt_i = 1 ÷ 逻辑时钟频率`）；`distance` 手填、`integralDistance` 独立算出，两边互不依赖 |
 | A25 | `coreLink` 的 `writes` 与 `consumeStacks` 互斥 |
 | A26 | `trigger`/`condition`/`effect` 必在枚举内 |
 | A27 | `ForcePhase` 目标阶段存在 |

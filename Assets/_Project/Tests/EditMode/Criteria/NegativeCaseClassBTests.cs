@@ -50,16 +50,19 @@ namespace EdgeChronicles.Tests.Criteria
                     }
                     return;
 
-                case "NC-B05": // 新增一条 tier=3 / visual_tier=generic 的合法派生（双向引用齐备）
+                case "NC-B05": // 在既有阶位上追加一个清单外的新派生 id（阶位行数不变）
                     {
-                        var d = new QaDerivativeRow();
-                        d.SkillId = "sk_jufeng";
-                        d.Tier = 3;
-                        d.UnlockType = "derivative";
-                        d.VisualTier = "generic";
-                        d.UnlockDerivativeId = "dv_jufeng_extra";
-                        d.CostEu = 3;
-                        s.Derivatives.Add(d);
+                        // 【D-03 裁定后】每技能恒为 5 阶 → **不能新增第 6 行**。
+                        // 合法的"新增派生"是：在某个既有阶位上挂一个新的派生 id
+                        // （该阶的派生效果类型所在处），并同步 skill.derivative_ids。
+                        // 阶位行数仍 5、new_graphic 条数仍 6、A43 配额不变。
+                        for (int i = 0; i < s.Derivatives.Count; i++)
+                        {
+                            if (s.Derivatives[i].SkillId == "sk_jufeng" && s.Derivatives[i].Tier == 3)
+                            {
+                                s.Derivatives[i].UnlockDerivativeId = "dv_jufeng_extra";
+                            }
+                        }
                         for (int i = 0; i < s.Skills.Count; i++)
                         {
                             if (s.Skills[i].Id == "sk_jufeng") { s.Skills[i].DerivativeIds.Add("dv_jufeng_extra"); }
@@ -67,18 +70,21 @@ namespace EdgeChronicles.Tests.Criteria
                     }
                     return;
 
-                case "NC-B06": // 区间端点：hold = 2.0 / 4.0，重档击退 1.2 / 1.5m
+                case "NC-B06": // 区间端点：重档击退取 1.2 / 1.5m；hitstop 取区间下界 0.05
+                    // 【为什么 hold 不在这里取端点】hold = hitstun − clip_W − hitstop×(1−scale)，
+                    // 三项都是整数帧时 2.0 / 4.0 不可达（能取到 2.3 / 3.9 这类值）。
+                    // 所以端点性质由**可达端点的判据**承担：击退距离（1.2 / 1.5m）与 hitstop（0.05 / 0.25）。
                     for (int i = 0; i < s.Knockbacks.Count; i++)
                     {
                         QaKnockbackRow k = s.Knockbacks[i];
-                        if (k.Tier == KnockbackTier.Light) { k.HoldDuration = CombatSpec.HoldDurationMin; }
-                        if (k.Tier == KnockbackTier.Medium) { k.HoldDuration = CombatSpec.HoldDurationMax; }
                         if (k.Tier == KnockbackTier.Heavy)
                         {
                             k.DistMin = CombatSpec.KnockbackDistMinHeavy;
                             k.DistMax = CombatSpec.KnockbackDistMaxHeavy;
                         }
                     }
+                    // hitstop 取区间下界（A30 的闭区间性质）
+                    s.Skills[0].HitShapes[0].Hitstop = CombatSpec.HitstopMin;
                     return;
 
                 default:

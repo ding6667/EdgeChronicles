@@ -1,6 +1,6 @@
 using System;
 
-namespace EdgeChronicles.Data
+namespace EdgeChronicles.Data.Tables
 {
     // ==========================================================================
     // 既有 13 张表（IMPL-v2.0 §5 契约）+ EL-03 §1.8/§1.9 的增量字段。

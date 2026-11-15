@@ -1,6 +1,6 @@
 using System;
 
-namespace EdgeChronicles.Data
+namespace EdgeChronicles.Data.Tables
 {
     // ==========================================================================
     // 养成层 7 张新表（EL-03 §1）+ 2 张被断言引用的扩展表。

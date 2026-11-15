@@ -18,7 +18,7 @@ gate.py — 《EdgeChronicles》资产入库 Gate
     1  存在未通过项（已退回 _WIP/ 并写 _fail.json）
     2  用法错误 / 内部错误 / 根目录不存在
 
-机器判定的 11 条硬约束
+机器判定的 13 条硬约束
 -----------------------
     G1 面数：角色 ≤15000 三角面；场景模块/地标/地面 ≤3000 三角面
     G2 贴图尺寸：主角 ≤2048；敌人/Boss ≤1024；场景 ≤512；UI 母版 ≤1024、切片 ≤128
@@ -37,6 +37,11 @@ gate.py — 《EdgeChronicles》资产入库 Gate
     G10 图集格位占用：图集 A 60 / B 63 / C 18（合计 141），技能图集 58/64
     G11 资源预算：贴图与网格内存不得超过**最低机型档**（默认 low）的
              `Tools/build/baselines/<tier>.json` 的 `memory` 段
+    G12 描边 Shader 收录：3 个 ECOutline* Shader 必须在 Graphics Settings 的
+             Always Included Shaders 里（漏收录 -> Shader.Find 返回 null ->
+             **画面无描边且不报错**，现有任何门控都抓不到）
+    G13 描边管线挂载：GraphicsSettings 与**全部画质档**都必须挂 URP 资产
+             （任一档为空 -> 切到那档回到 Built-in，描边消失）
 
 贴图尺寸口径（不写第二套）
 ------------------------
@@ -961,6 +966,16 @@ def run_gate(root, dry_run=False, do_reject=True,
         rec.fail(prob["code"], prob["message"], prob.get("fix", ""))
         records.append(rec)
 
+    # G12 / G13 描边管线接线（静默失败点）
+    pipe_problems, pipe_warnings = check_pipeline_wiring(base_root)
+    if pipe_problems or pipe_warnings:
+        rec = Record("(全局) 描边管线接线", "global", "PIPELINE")
+        for prob in pipe_problems:
+            rec.fail(prob["code"], prob["message"], prob.get("fix", ""))
+        for warn in pipe_warnings:
+            rec.warn(warn["code"], warn["message"])
+        records.append(rec)
+
     # 退回 _WIP
     rejected = []
     if do_reject:
@@ -1125,6 +1140,144 @@ def _check_references(root, records, cache):
         if rec.path.replace("\\", "/") not in referenced:
             rec.warn("G8-ORPHAN",
                      "贴图没有被任何 sidecar 引用（孤立资产）")
+
+
+# ---------------------------------------------------------------------------
+# G12 / G13 描边管线接线（静默失败点）
+# ---------------------------------------------------------------------------
+
+# 三个描边 Shader：漏进 Always Included Shaders -> Shader.Find 返回 null
+# -> Feature 静默跳过 -> 画面无描边且**不报错**。现有任何门控都抓不到。
+OUTLINE_SHADER_NAMES = ("EC/OutlineMask", "EC/OutlineDilate", "EC/OutlineComposite")
+
+
+def _read_text(path):
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def _always_included_guids(graphics_settings_path):
+    """解析 ProjectSettings/GraphicsSettings.asset 的 m_AlwaysIncludedShaders。"""
+    text = _read_text(graphics_settings_path)
+    if text is None:
+        return None
+    guids = []
+    in_block = False
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("m_AlwaysIncludedShaders:"):
+            in_block = True
+            continue
+        if in_block:
+            if stripped.startswith("- "):
+                m = re.search(r"guid:\s*([0-9a-fA-F]{32})", stripped)
+                if m:
+                    guids.append(m.group(1))
+            elif stripped and not stripped.startswith("- "):
+                break
+    return guids
+
+
+def _project_render_pipeline_wired(project_root):
+    """检查 GraphicsSettings + 全部画质档都挂了 URP 资产。"""
+    gs_path = os.path.join(project_root, "ProjectSettings", "GraphicsSettings.asset")
+    text = _read_text(gs_path)
+    if text is None:
+        return ["读不到 %s" % gs_path]
+
+    problems = []
+    m = re.search(r"m_CustomRenderPipeline:\s*\{fileID:\s*(\d+)", text)
+    if m is None or m.group(1) == "0":
+        problems.append("GraphicsSettings.m_CustomRenderPipeline 为空 —— "
+                        "工程仍在 Built-in 管线，描边通道整体不工作")
+
+    q_path = os.path.join(project_root, "ProjectSettings", "QualitySettings.asset")
+    qtext = _read_text(q_path)
+    if qtext is None:
+        problems.append("读不到 %s" % q_path)
+    else:
+        tiers = re.findall(r"customRenderPipeline:\s*\{fileID:\s*(\d+)", qtext)
+        if not tiers:
+            problems.append("QualitySettings 里没有 customRenderPipeline 字段")
+        null_tiers = sum(1 for t in tiers if t == "0")
+        if null_tiers:
+            problems.append("%d 个画质档的 customRenderPipeline 为空 —— "
+                            "切到那些档会回到 Built-in，描边消失"
+                            % null_tiers)
+    return problems
+
+
+def _find_shader_guids(project_root):
+    """扫描 Assets 下所有 .shader，找出三个描边 Shader 的 guid。"""
+    found = {}
+    assets_root = os.path.join(project_root, "Assets")
+    for dirpath, dirnames, filenames in os.walk(assets_root):
+        dirnames[:] = [d for d in dirnames if d not in (".git", "_WIP")]
+        for name in filenames:
+            if not name.endswith(".shader"):
+                continue
+            full = os.path.join(dirpath, name)
+            head = _read_text(full)
+            if head is None:
+                continue
+            m = re.search(r'Shader\s+"([^"]+)"', head)
+            if not m:
+                continue
+            shader_name = m.group(1)
+            if shader_name not in OUTLINE_SHADER_NAMES:
+                continue
+            meta = _read_text(full + ".meta")
+            if meta is None:
+                continue
+            g = re.search(r"guid:\s*([0-9a-fA-F]{32})", meta)
+            if g:
+                found[shader_name] = g.group(1)
+    return found
+
+
+def check_pipeline_wiring(project_root):
+    """G12 / G13：描边管线的接线完整性。
+
+    返回 (problems, warnings)。
+    """
+    problems = []
+    warnings = []
+
+    for msg in _project_render_pipeline_wired(project_root):
+        problems.append({"code": "G13-URP", "message": msg,
+                         "fix": "先让工程侧把 URP 资产挂上 GraphicsSettings 与全部画质档"})
+
+    gs_path = os.path.join(project_root, "ProjectSettings", "GraphicsSettings.asset")
+    included = _always_included_guids(gs_path)
+    if included is None:
+        problems.append({"code": "G12-GS", "message": "读不到 %s" % gs_path,
+                         "fix": "确认工程路径"})
+        return problems, warnings
+
+    found = _find_shader_guids(project_root)
+    missing_files = [n for n in OUTLINE_SHADER_NAMES if n not in found]
+    if missing_files:
+        warnings.append({
+            "code": "G12-NOTCOPIED",
+            "message": "描边 Shader 尚未拷进工程（缺 %s）——描边通道未启用"
+                       % "、".join(missing_files),
+            "fix": "把 Tools/art/shaders/* 拷到 Assets/_Project/Art/Shaders/",
+        })
+        return problems, warnings
+
+    not_included = [n for n in OUTLINE_SHADER_NAMES if found[n] not in included]
+    if not_included:
+        problems.append({
+            "code": "G12-ALWAYS",
+            "message": "Always Included Shaders 未收录：%s —— "
+                       "Shader.Find 会返回 null，**画面无描边且不报错**"
+                       % "、".join(not_included),
+            "fix": "Project Settings > Graphics > Always Included Shaders 追加这 3 个 Shader",
+        })
+    return problems, warnings
 
 
 # ---------------------------------------------------------------------------

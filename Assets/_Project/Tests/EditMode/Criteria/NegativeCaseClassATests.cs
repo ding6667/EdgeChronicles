@@ -91,10 +91,17 @@ namespace EdgeChronicles.Tests.Criteria
                     s.InputTimestampPipelinesIndependent = false;
                     return;
 
-                case "NC-A15": // hold 过短
+                case "NC-A15": // hold 过短（受击剪辑变长 → clip_W 变大 → hold 变小）
+                    // 【D-04 口径】hold = hitstun − clip_W − hitstop × (1 − time_scale)
+                    // 13 C 帧 @60fps → clip_W = 13 → 18−13−1.7 = 3.3；
+                    // 改成 15 C 帧 → 18−15−1.7 = 1.3 < 2 → 必须报红。
                     for (int i = 0; i < s.Knockbacks.Count; i++)
                     {
-                        if (s.Knockbacks[i].Tier == KnockbackTier.Light) { s.Knockbacks[i].HoldDuration = 1.5f; }
+                        if (s.Knockbacks[i].Tier == KnockbackTier.Light)
+                        {
+                            s.Knockbacks[i].AnimClipLengthC = 15;
+                            s.Knockbacks[i].HoldDuration = s.Knockbacks[i].ComputedHold();
+                        }
                     }
                     return;
 
@@ -105,7 +112,10 @@ namespace EdgeChronicles.Tests.Criteria
                         {
                             s.Knockbacks[i].HitstopFrames = 8;
                             s.Knockbacks[i].SplitFrame = 8;
-                            s.Knockbacks[i].CurveFrames = 8 + CombatSpec.KnockbackRearWindowFrames;
+                            s.Knockbacks[i].RearWindowFrames = CombatSpec.KnockbackRearWindowFrames;
+                            s.Knockbacks[i].CurveFrames = 8 + s.Knockbacks[i].RearWindowFrames;
+                            // hold 是派生列：声明值必须跟着重算，否则会额外触发 F-HOLD 的"禁手填"检查。
+                            s.Knockbacks[i].HoldDuration = s.Knockbacks[i].ComputedHold();
                         }
                     }
                     return;
@@ -146,7 +156,9 @@ namespace EdgeChronicles.Tests.Criteria
                     return;
 
                 case "NC-A24": // 取消窗口引用不存在的标签
-                    s.CancelWindows[0].AllowTag = "dodge";
+                    // 【D-10 裁定后】"dodge" 是门派共有动作标签，**在合法全集内**，
+                    // 所以负向注入必须用真正不在全集里的标签。
+                    s.CancelWindows[0].AllowTag = "airborne";
                     return;
 
                 default:
@@ -172,9 +184,12 @@ namespace EdgeChronicles.Tests.Criteria
             switch (caseId)
             {
                 case "NC-A16":
-                    // 顿帧 6 → 8 帧：既越过因果式上限 0.15×h≤1，
-                    // 也把"位移归零 → 收身起始"的空档从 2.1 帧压到 1.8 帧。
-                    return new string[] { CriterionOracle.FRecoveryGap };
+                    // 顿帧 6 → 8 帧是**一个物理错误的三个后果**：
+                    //   ① 越过因果式上限 0.15×8 = 1.2 > 1（F-HITSTOP-CAUSAL）
+                    //   ② hold 重算值 = 22 − 13 − 8×0.85 = 2.2，与声明的 3.9 不符（F-HOLD）
+                    //   ③ 位移归零 → 收身起始的空档被压到 1.8 帧（F-RECOVERY-GAP）
+                    // 三条都是真的，所以三条都该报红 —— 登记为连带，不算"改多了地方"。
+                    return new string[] { CriterionOracle.FHold, CriterionOracle.FRecoveryGap };
                 case "NC-A22":
                     // 前摇 8 → 0 帧：技能总帧数缩短，而取消窗口以绝对帧号声明，
                     // 于是窗口尾帧越界（A21）。这是同一个错误的第二个后果。

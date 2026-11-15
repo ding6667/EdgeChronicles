@@ -43,9 +43,10 @@ namespace EdgeChronicles.Tests.Criteria
                     s.Skills[0].HitShapes.Clear();
                     return;
 
-                case "S-04": // A24：曲线积分偏差 8%
-                    s.MovementCurves[0].DeclaredDistance = 3.0f;
-                    s.MovementCurves[0].Keys = new List<float> { 0.20f, 0.40f, 0.25f, 0.05f, 0.02f }; // Σ = 0.92
+                case "S-04": // A24：曲线积分与声明偏差 8%
+                    // 【口径无关的注入】按**当前口径**生成一条积分只有声明值 92% 的曲线：
+                    // 速度口径下 keys 是 m/s，占比口径下 keys 是 Σ=0.92 的占比 —— 两种口径偏差都是 8%。
+                    s.MovementCurves[0] = ScenarioFactory.MakeCurve("mc_xunfeng", 3.0f, 5, 0.92f);
                     return;
 
                 case "S-05": // A25：coreLink 同时写状态又消耗层数

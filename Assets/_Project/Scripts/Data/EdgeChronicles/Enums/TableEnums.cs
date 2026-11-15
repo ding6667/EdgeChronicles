@@ -94,20 +94,23 @@ namespace EdgeChronicles.Data
     /// <summary>手札特技触发时机。</summary>
     public enum SpecialtyTrigger
     {
+        /// <summary>常驻规则：随养成快照生效，无触发帧（IMPL-v3.0.md §4.8.6 的 sp_resource_cap_1）。</summary>
+        always = 0,
+
         /// <summary>释放时。</summary>
-        on_cast = 0,
+        on_cast = 1,
 
         /// <summary>命中时。</summary>
-        on_hit = 1,
+        on_hit = 2,
 
         /// <summary>闪避时。</summary>
-        on_dodge = 2,
+        on_dodge = 3,
 
         /// <summary>完美闪避时。</summary>
-        on_perfect_dodge = 3,
+        on_perfect_dodge = 4,
 
         /// <summary>核心状态时。</summary>
-        on_core_state = 4
+        on_core_state = 5
     }
 
     /// <summary>锋饰类型（决定可插孔位）。</summary>
@@ -328,7 +331,7 @@ namespace EdgeChronicles.Data
         public static readonly string[] SpecialtySlotValues = { "slot_1", "slot_2", "slot_3" };
 
         /// <summary>特技触发时机的合法值。</summary>
-        public static readonly string[] SpecialtyTriggerValues = { "on_cast", "on_hit", "on_dodge", "on_perfect_dodge", "on_core_state" };
+        public static readonly string[] SpecialtyTriggerValues = { "always", "on_cast", "on_hit", "on_dodge", "on_perfect_dodge", "on_core_state" };
 
         /// <summary>锋饰类型的合法值。</summary>
         public static readonly string[] SocketItemTypeValues = { "atk", "def", "util" };

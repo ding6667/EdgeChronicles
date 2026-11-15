@@ -132,29 +132,21 @@ namespace EdgeChronicles.Tests.Qa
                 int total = phases[i, 0] + phases[i, 1] + phases[i, 2];
                 var w = new QaCancelWindowRow();
                 w.SourceTag = SkillTags[i];
-                // 【口径声明】A22 要求 allowTags 命中某个 skill.entryTags。
-                // 8 个技能的 entryTags 为 core/light/heavy/dash/control/guard/channel/finisher，
-                // **不含 "dodge"** —— IMPL-v2.0 §3.4 的样例却用了 "dodge"。
-                // 该冲突已登记为 D-10；本基线取合法标签 "dash"，使基线本身是"可判定的合法态"。
-                w.AllowTag = "dash";
+                // 【D-10 裁定】A22 的判定集合 = 8 技能 entryTags ∪ 门派共有动作标签 {dodge, attack}。
+                // 闪避是门派共有层动作（没有 entryTags 行），但**可以取消进入任何技能**，
+                // 所以它的标签只能出现在 allowTag 侧，不能作 sourceTag。
+                w.AllowTag = "dodge";
                 // 窗口必须落在该技能的可取消段（recovery）内，否则回放会记为非法相变。
                 w.FromFrame = phases[i, 0] + phases[i, 1];
                 w.ToFrame = total - 1;
                 s.CancelWindows.Add(w);
             }
 
-            // ── 位移曲线（积分 = 声明）──
-            var mc = new QaMovementCurveRow();
-            mc.CurveId = "mc_xunfeng";
-            mc.Keys.AddRange(new List<float> { 0.20f, 0.40f, 0.25f, 0.10f, 0.05f }); // Σ = 1.00（归一化位移占比）
-            mc.DeclaredDistance = 3.0f;
-            s.MovementCurves.Add(mc);
-
-            var mc2 = new QaMovementCurveRow();
-            mc2.CurveId = "mc_huifeng";
-            mc2.Keys.AddRange(new List<float> { 0.00f, 0.40f, 0.45f, 0.15f });   // Σ = 1.00（归一化位移占比）
-            mc2.DeclaredDistance = 3.0f;
-            s.MovementCurves.Add(mc2);
+            // ── 位移曲线（积分 = 声明；keys 按**当前口径**生成）──
+            // 【D-13 / D-02 冲突】两种口径都实现，基线按当前开关生成，
+            // 所以无论最终裁哪一种，合法基线都仍然是合法态（不出现"切开关就全红"）。
+            s.MovementCurves.Add(MakeCurve("mc_xunfeng", 3.0f, 5));
+            s.MovementCurves.Add(MakeCurve("mc_huifeng", 3.0f, 4));
 
             // ── 副本门槛（IMPL-v3.0 §6 三副本：100 / 900 / 2400）──
             s.Dungeons.Add(new QaDungeonRow { DungeonId = "dungeon_luoxia", CpThreshold = 100, ExpectedTotalPower = 390 });
@@ -277,6 +269,50 @@ namespace EdgeChronicles.Tests.Qa
             return s;
         }
 
+        /// <summary>
+        /// 按当前曲线口径生成一条"积分 = 声明"的合法曲线。
+        /// · 速度口径（m/s）：keys 是逐帧速度，Σ(keys) × (1/60) = 声明距离。
+        /// · 占比口径（Σ = 1）：keys 是逐帧归一化位移占比，Σ = 1。
+        /// </summary>
+        public static QaMovementCurveRow MakeCurve(string curveId, float declaredDistance, int keyCount)
+        {
+            return MakeCurve(curveId, declaredDistance, keyCount, 1f);
+        }
+
+        /// <summary>
+        /// 按当前曲线口径生成一条曲线。<paramref name="scaleFactor"/> &lt; 1 会让积分距离按同比例缩短
+        /// （两种口径下都成立），用于构造"A24 偏差"负向注入。
+        /// </summary>
+        public static QaMovementCurveRow MakeCurve(string curveId, float declaredDistance, int keyCount, float scaleFactor)
+        {
+            var c = new QaMovementCurveRow();
+            c.CurveId = curveId;
+            c.DeclaredDistance = declaredDistance;
+            // 速度剖面（相对形状）：前段慢、中段快、后段收 —— 只用于让不同 keyCount 的曲线形状合理。
+            float[] shape = new float[keyCount];
+            float sum = 0f;
+            for (int i = 0; i < keyCount; i++)
+            {
+                float x = keyCount <= 1 ? 1f : (float)i / (keyCount - 1);
+                shape[i] = 1f - x * 0.6f;
+                sum += shape[i];
+            }
+            for (int i = 0; i < keyCount; i++)
+            {
+                float share = shape[i] / sum;
+                if (CurveSemantics.Current == CurveKeySemantics.SpeedMetersPerSecond)
+                {
+                    // 逐帧速度 m/s：share × 声明距离 ÷ dt
+                    c.Keys.Add(share * declaredDistance * scaleFactor / CurveSemantics.DtSeconds);
+                }
+                else
+                {
+                    c.Keys.Add(share * scaleFactor);
+                }
+            }
+            return c;
+        }
+
         public static QaKnockbackRow MakeKnockback(KnockbackTier tier)
         {
             var k = new QaKnockbackRow();
@@ -309,8 +345,15 @@ namespace EdgeChronicles.Tests.Qa
                     break;
             }
             k.HitstopTimeScale = CombatSpec.HitstopTimeScale;
+            // 【D-04 裁定】hold 由同轴换算得出：clip_W = anim_clip_length × 60 ÷ anim_fps。
+            // 受击剪辑 13 C 帧 @60fps → clip_W = 13 → 18−13−1.7=3.3 / 20−13−3.4=3.6 / 22−13−5.1=3.9。
+            k.AnimClipLengthC = 13;
+            k.AnimFps = 60;
+            k.HoldDuration = k.ComputedHold();
+            // 【D-05 裁定】后段窗口是击退曲线的派生量；收身起始是参数。
+            k.RearWindowFrames = CombatSpec.KnockbackRearWindowFrames;
             k.SplitFrame = k.HitstopFrames;
-            k.CurveFrames = k.HitstopFrames + CombatSpec.KnockbackRearWindowFrames;
+            k.CurveFrames = k.HitstopFrames + k.RearWindowFrames;
             k.RecoveryStartProgress = CombatSpec.RecoveryStartProgressBase;
             return k;
         }
@@ -344,14 +387,17 @@ namespace EdgeChronicles.Tests.Qa
         {
             // 6 条 new_graphic 派生及其归属（IMPL-v3.0 §4.8.5）
             // 【D-03 裁定】派生可落在 1 / 2 / 3 / 5 阶；当前 8 条落在 2 / 3 / 5。
-            var newGraphicTier = new Dictionary<string, int>
+            // 派生条目清单（§4.8.5 的 8 条 = 6 new_graphic + 2 generic）。
+            // 【D-03 裁定】派生条目的 tier = 该派生所属技能「派生效果」类型所占的阶位；
+            // 当前 8 条落在 2 / 3 / 5 阶（破势回锋在缚锋 2 阶）。
+            var newGraphicEffects = new KeyValuePair<string, int>[]
             {
-                { "sk_shifeng", 3 },  // 末跳翻倍 · 拾锋式 3 阶
-                { "sk_xunfeng", 3 },  // 回响 · 迅锋 3 阶
-                { "sk_fufeng", 2 },   // 破势回锋 · 缚锋 2 阶（D-03 裁定后合法）
-                { "sk_baoyuan", 5 },  // 破罩冲击 · 抱元 5 阶
-                { "sk_jufeng", 5 },   // 聚锋簇 · 聚锋 5 阶
-                { "sk_pofeng", 5 }    // 引爆再展域 · 破锋 5 阶
+                new KeyValuePair<string, int>("sk_shifeng", 3),  // 末跳翻倍 · 拾锋式 3 阶
+                new KeyValuePair<string, int>("sk_xunfeng", 3),  // 回响 · 迅锋 3 阶
+                new KeyValuePair<string, int>("sk_fufeng", 2),   // 破势回锋 · 缚锋 2 阶
+                new KeyValuePair<string, int>("sk_baoyuan", 5),  // 破罩冲击 · 抱元 5 阶
+                new KeyValuePair<string, int>("sk_jufeng", 5),   // 聚锋簇 · 聚锋 5 阶
+                new KeyValuePair<string, int>("sk_pofeng", 5)    // 引爆再展域 · 破锋 5 阶
             };
             var newGraphicId = new Dictionary<string, string>
             {
@@ -362,6 +408,20 @@ namespace EdgeChronicles.Tests.Qa
                 { "sk_jufeng", "dv_gather_cluster" },
                 { "sk_pofeng", "dv_finish_extra_domain" }
             };
+
+            // 先建派生条目（阶位行的 visual_tier 取决于该阶是否挂了 new_graphic 派生）。
+            for (int i = 0; i < newGraphicEffects.Length; i++)
+            {
+                var e = new QaDerivativeEffectRow();
+                e.SkillId = newGraphicEffects[i].Key;
+                e.Tier = newGraphicEffects[i].Value;
+                e.DerivativeId = newGraphicId[e.SkillId];
+                e.VisualTier = "new_graphic";
+                s.DerivativeEffects.Add(e);
+            }
+            // 2 条 generic 派生（挂在已有派生阶上 → 每技能至多 2 条，达上限）
+            s.DerivativeEffects.Add(new QaDerivativeEffectRow { SkillId = "sk_shifeng", Tier = 3, DerivativeId = "dv_shifeng_generic", VisualTier = "generic" });
+            s.DerivativeEffects.Add(new QaDerivativeEffectRow { SkillId = "sk_xunfeng", Tier = 3, DerivativeId = "dv_xunfeng_generic", VisualTier = "generic" });
 
             for (int i = 0; i < SkillIds.Length; i++)
             {
@@ -382,11 +442,14 @@ namespace EdgeChronicles.Tests.Qa
 
                     if (tier == 5) { d.MechanicTargets.Add("loop_l4"); } // A41：长度 ≤ 1
 
-                    int gTier;
-                    if (newGraphicTier.TryGetValue(skillId, out gTier) && gTier == tier)
+                    // 该阶是否挂了 new_graphic 派生条目（挂了则阶位行的视觉层级是 new_graphic）
+                    for (int e = 0; e < s.DerivativeEffects.Count; e++)
                     {
-                        d.VisualTier = "new_graphic";
-                        d.UnlockDerivativeId = newGraphicId[skillId];
+                        QaDerivativeEffectRow eff = s.DerivativeEffects[e];
+                        if (eff.SkillId == skillId && eff.Tier == tier && eff.VisualTier == "new_graphic")
+                        {
+                            d.VisualTier = "new_graphic";
+                        }
                     }
 
                     s.Derivatives.Add(d);
@@ -397,11 +460,11 @@ namespace EdgeChronicles.Tests.Qa
             for (int i = 0; i < s.Skills.Count; i++)
             {
                 QaSkillRow sk = s.Skills[i];
-                for (int k = 0; k < s.Derivatives.Count; k++)
+                for (int k = 0; k < s.DerivativeEffects.Count; k++)
                 {
-                    if (s.Derivatives[k].SkillId == sk.Id && !string.IsNullOrEmpty(s.Derivatives[k].UnlockDerivativeId))
+                    if (s.DerivativeEffects[k].SkillId == sk.Id)
                     {
-                        sk.DerivativeIds.Add(s.Derivatives[k].UnlockDerivativeId);
+                        sk.DerivativeIds.Add(s.DerivativeEffects[k].DerivativeId);
                     }
                 }
             }
@@ -910,6 +973,7 @@ namespace EdgeChronicles.Tests.Qa
                 {
                     Tier = k.Tier, HitstunFrames = k.HitstunFrames, HitstopFrames = k.HitstopFrames,
                     HitstopTimeScale = k.HitstopTimeScale, HoldDuration = k.HoldDuration,
+                    AnimClipLengthC = k.AnimClipLengthC, AnimFps = k.AnimFps, RearWindowFrames = k.RearWindowFrames,
                     DistMin = k.DistMin, DistMax = k.DistMax, SplitFrame = k.SplitFrame,
                     CurveFrames = k.CurveFrames, RecoveryStartProgress = k.RecoveryStartProgress, PeakSpeed = k.PeakSpeed
                 });
@@ -920,8 +984,16 @@ namespace EdgeChronicles.Tests.Qa
                 s.Derivatives.Add(new QaDerivativeRow
                 {
                     SkillId = d.SkillId, Tier = d.Tier, UnlockType = d.UnlockType, VisualTier = d.VisualTier,
-                    UnlockDerivativeId = d.UnlockDerivativeId, MechanicTargets = new List<string>(d.MechanicTargets),
+                    MechanicTargets = new List<string>(d.MechanicTargets),
                     CostEu = d.CostEu
+                });
+            }
+            for (int i = 0; i < src.DerivativeEffects.Count; i++)
+            {
+                var e = src.DerivativeEffects[i];
+                s.DerivativeEffects.Add(new QaDerivativeEffectRow
+                {
+                    SkillId = e.SkillId, Tier = e.Tier, DerivativeId = e.DerivativeId, VisualTier = e.VisualTier
                 });
             }
             for (int i = 0; i < src.EffectMerges.Count; i++)

@@ -464,9 +464,9 @@ namespace EdgeChronicles.Tests.Qa
             new NegativeCaseRecord
             {
                 Id = "NC-A15", Class = NegativeCaseClass.Sensitivity, TargetCriterionId = CriterionOracle.FHold,
-                Injection = "把轻档的 hold 时长从 3.3 帧改成 1.5 帧。",
-                Expected = "判据必须报错：hold ∈ [2,4] 帧（F-HOLD 报红）。",
-                MeaningIfNotFired = "hold 过短 → 被打断的窗口不足，玩家感到「打了但没僵住」，回手的节奏被吃掉。",
+                Injection = "把轻档的受击剪辑从 13 C 帧加长到 17 C 帧（@60fps）→ clip_W = 17 → hold 重算 = 18 − 17 − 2×0.85 = −0.7 帧。",
+                Expected = "判据必须报错：换算后 hold < 0 必须报错、**不取 0**（F-HOLD 报红）。",
+                MeaningIfNotFired = "hold 变负 → 若实现按「取 0」处理，受击硬直会短于剪辑本身，玩家感到「打了但没僵住」，回手节奏被吃掉；且负值本身说明硬直与剪辑长度不匹配，属数据层错误。",
                 SourceRef = "GDD-v1.0.md §7.3 / §9.4 导表硬断言 #11",
                 Channel = CriterionExecutability.AutoScript
             },
@@ -547,10 +547,10 @@ namespace EdgeChronicles.Tests.Qa
             new NegativeCaseRecord
             {
                 Id = "NC-A24", Class = NegativeCaseClass.Sensitivity, TargetCriterionId = CriterionOracle.A22,
-                Injection = "把某条取消窗口的 allowTag 改成 \"dodge\"（8 个技能的 entryTags 里不存在该标签）。",
-                Expected = "判据必须报错：allowTags 必须命中某个 skill.entryTags（A22 报红）。",
+                Injection = "把某条取消窗口的 allowTag 改成 \"not_a_real_tag\"（既不在任何 skill.entryTags，也不在门派共有动作标签 {dodge, attack} 里）。",
+                Expected = "判据必须报错：allowTags 必须落在标签全集内 = 8 技能 entryTags ∪ {dodge, attack}（A22 报红）。",
                 MeaningIfNotFired = "引用了不存在的标签 → 取消窗口永远匹配不上，或被静默忽略，产生「看起来有窗口、实际取消不了」的死窗口。",
-                SourceRef = "IMPL-v2.0.md §5 断言 A22（该冲突另见 D-10）",
+                SourceRef = "IMPL-v2.0.md §5 断言 A22；【D-10 裁定】标签全集 = 技能 entryTags ∪ 门派共有动作标签",
                 RelatedAssertionIds = new List<string> { A22 },
                 Channel = CriterionExecutability.AutoScript
             },
@@ -599,8 +599,8 @@ namespace EdgeChronicles.Tests.Qa
             new NegativeCaseRecord
             {
                 Id = "NC-B05", Class = NegativeCaseClass.Specificity, TargetCriterionId = CriterionOracle.A331,
-                Injection = "给聚锋新增一条 tier=3、visual_tier=generic 的合法派生，并把它同步写进 skill.derivative_ids（双向引用齐备，new_graphic 条数不变）。",
-                Expected = "判据必须通过：A33-1 / A33-5 / A43 全部不得报红。",
+                Injection = "给聚锋的 tier=3 阶（该阶的派生效果类型）挂一个清单外的新派生 id，并同步写进 skill.derivative_ids（双向引用齐备、阶位行数仍为 5、new_graphic 条数不变）。",
+                Expected = "判据必须通过：A33（每技能 5 阶恰好覆盖 5 种类型各一次）/ A33-1 / A33-2（至多 2 条）/ A33-5 / A43 全部不得报红。",
                 MeaningIfNotFired = "派生条目数被写死成 8 / 6 之后，任何新增派生都会被判为违规——而 §4.8.5 明确「不写死条数」。",
                 LegalDesignAtRisk = "**任何新增的技传派生条目（尤其是视觉层级为 generic / param 的那类）。** 派生清单是可以增长的；判据只能校验双向引用一致性，不能校验条数本身。",
                 SourceRef = "EL-03 §2 A33-1 / A33-5；IMPL-v3.0.md §4.8.5",
@@ -610,10 +610,10 @@ namespace EdgeChronicles.Tests.Qa
             new NegativeCaseRecord
             {
                 Id = "NC-B06", Class = NegativeCaseClass.Specificity, TargetCriterionId = CriterionOracle.FHold,
-                Injection = "把 hold 时长取到区间端点（2.0 与 4.0 帧），并把重档击退距离取到端点（1.2 与 1.5m）。",
+                Injection = "把三档的击退距离取到区间端点（轻 0.3 / 0.6m，重 1.2 / 1.5m），并把 hold 的**重算值**取到区间内最接近端点的可达值（轻档 2.3 帧、重档 3.7 帧）。",
                 Expected = "判据必须通过：区间判据必须**含端点**，不得报红。",
                 MeaningIfNotFired = "区间写成开区间（< / >）后，正好落在规格边界上的合法取值会被判为违规——而边界值恰恰是设计最常选的地方。",
-                LegalDesignAtRisk = "**任何恰好落在规格边界上的合法取值。** 所有区间型判据（hold、击退距离、hitstop、门槛比例）必须显式声明端点归属；GDD §9.4 的写法是「∈ [2,4]」（闭区间）。",
+                LegalDesignAtRisk = "**任何恰好落在规格边界上的合法取值。** 所有区间型判据（hold、击退距离、hitstop、门槛比例）必须显式声明端点归属；GDD §9.4 的写法是「∈ [2,4]」（闭区间）。注：hold 的端点 2.0 / 4.0 在 time_scale = 0.15 下**不可达**（小数部分恒为 .3/.6/.7），该缺口已登记为 D-14，故本用例用「最接近端点的可达值」代替。",
                 SourceRef = "GDD-v1.0.md §9.4（hold ∈ [2,4] 闭区间写法）；§7.3 击退区间",
                 Channel = CriterionExecutability.AutoScript
             }

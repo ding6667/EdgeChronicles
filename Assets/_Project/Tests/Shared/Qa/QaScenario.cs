@@ -204,7 +204,13 @@ namespace EdgeChronicles.Tests.Qa
         public float PushWindowRatioMax = 0.05f;
     }
 
-    /// <summary>技传阶位行（EL-03 §1.3 tech_skill）。</summary>
+    /// <summary>
+    /// **技传阶位行**（EL-03 §1.3 tech_skill）。
+    /// 【D-03 裁定后的模型】阶位行与派生条目是**两件事**：
+    ///   · 阶位行：每技能恰好 5 行，5 种 unlock_type 各覆盖一次（tier1 恒 stat、tier5 恒 mechanic）。
+    ///   · 派生条目：挂在某个阶位上的具体派生效果（§4.8.5 的 8 条），单独成表。
+    /// 之前把两者混在一行里，导致"新增一条派生"会破坏"每技能 5 阶"的不变量 —— 那是模型错误，不是判据错误。
+    /// </summary>
     public sealed class QaDerivativeRow
     {
         public string SkillId = "sk_shifeng";
@@ -213,9 +219,24 @@ namespace EdgeChronicles.Tests.Qa
         public string UnlockType = "stat";
         /// <summary>none / param / generic / new_graphic。</summary>
         public string VisualTier = "none";
-        public string UnlockDerivativeId = "";
         public List<string> MechanicTargets = new List<string>();
         public int CostEu = 1;
+    }
+
+    /// <summary>
+    /// **派生条目**（§4.8.5 的 8 条派生清单）。
+    /// 每条挂在某个技能的某个阶位上；<see cref="Tier"/> = 该派生所属技能「派生效果」类型所占的阶位
+    /// （当前 8 条落在 2 / 3 / 5 阶）。
+    /// </summary>
+    public sealed class QaDerivativeEffectRow
+    {
+        public string SkillId = "sk_shifeng";
+        /// <summary>所属阶位（1..5）。</summary>
+        public int Tier = 3;
+        /// <summary>派生条目 id（§4.8.5 的 dv_*）。</summary>
+        public string DerivativeId = "dv_xxx";
+        /// <summary>none / param / generic / new_graphic。</summary>
+        public string VisualTier = "new_graphic";
     }
 
     /// <summary>
@@ -337,6 +358,7 @@ namespace EdgeChronicles.Tests.Qa
         public List<QaVfxAssetRow> VfxAssets = new List<QaVfxAssetRow>();
         public List<QaKnockbackRow> Knockbacks = new List<QaKnockbackRow>();
         public List<QaDerivativeRow> Derivatives = new List<QaDerivativeRow>();
+        public List<QaDerivativeEffectRow> DerivativeEffects = new List<QaDerivativeEffectRow>();
         public List<QaEffectMergeRow> EffectMerges = new List<QaEffectMergeRow>();
         public List<QaMeridianRow> Meridians = new List<QaMeridianRow>();
         public List<QaDropPityRow> DropPity = new List<QaDropPityRow>();

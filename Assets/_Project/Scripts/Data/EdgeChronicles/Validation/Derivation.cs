@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using EdgeChronicles.Data.Schema;
 using EdgeChronicles.Data.Serialization;
+using EdgeChronicles.Data.Tables;
 
 namespace EdgeChronicles.Data.Validation
 {
