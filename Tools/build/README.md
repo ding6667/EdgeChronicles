@@ -18,6 +18,7 @@ Tools/build/
 ├── verify-artifact.sh       产物校验（用 manifest 的校验和判定「是不是这一版」）
 ├── lint-assets.sh           资产 Gate（命名 / 贴图 / 材质槽 / LFS 边界 / 版本 / 密钥）
 ├── ci-unity-preflight.sh    CI 预检：解析 Unity / 校验版本 / 激活许可证（三条工作流共用）
+├── ci-entrypoint-check.sh  CI 入口预检：executeMethod 指向的类型必须真实存在
 ├── baselines/
 │   ├── low.json             低档 · 集显轻薄本（验收底线）
 │   ├── medium.json          中档 · 默认发行档
@@ -148,7 +149,7 @@ Build/low-il2cpp-win64/
 | 4 | 机型基线非法 | JSON 不合法、必填字段缺失 |
 | 5 | 构建失败 | Unity 报错、产物缺失、没有构建场景 |
 | 6 | 产物校验失败 | 与 manifest 的 sha256 对不上 |
-| 7 | 资产 Gate 未通过 | 有 `[LINT] FAIL` |
+| 7 | 资产 Gate 未通过 / CI 入口预检失败 | 有 `[LINT] FAIL`；`-executeMethod` 指向的类型不存在或命名空间不匹配 |
 | 8 | 缺少依赖 | 没有 jq / python3 / sha256sum |
 | 9 | 归档或回滚步骤失败 | — |
 | 10 | 版本源不可信 | 工作树非干净、版本号格式非法 |
@@ -166,7 +167,32 @@ bash Tools/build/build-player.sh --tier low
 
 退出码 3。**不会**伪装成构建成功。
 
-### 5.2 构建期对工程设置的临时改动
+### 5.2 CI 入口预检：`-executeMethod` 指向的类型必须真实存在
+
+Unity 的 `-executeMethod` 指向的类型不存在时，要**导入完整个工程之后**才报错，
+日志里只有一句 `executeMethod method not found` —— 很容易误判成「代码编译不过」。
+
+`Tools/build/ci-entrypoint-check.sh` 在**不启动 Unity** 的前提下做文件级检查：
+扫出 `Tools/ci/*.sh` 里所有 `-executeMethod`，逐条在 `Assets/` 里找对应类型的定义
+（类声明 + 命名空间）与方法，对不上就明确报出：哪个脚本、期望什么、实际有什么、怎么改。
+
+```
+[FAIL ] check-data.sh 引用的类型不存在: EdgeChronicles.Tools.Editor.Ci.ImportAndValidate
+[FAIL ]   读法 A（Unity 规则）：类全名 = EdgeChronicles.Tools.Editor.Ci，方法 = ImportAndValidate
+[FAIL ]            即：命名空间 EdgeChronicles.Tools.Editor 下的类 Ci，含静态方法 ImportAndValidate
+[FAIL ]   最可能的修法（Ci 门面类写法，与脚本注释『入口：<值>』一致）：
+[FAIL ]     namespace EdgeChronicles.Tools.Editor {
+[FAIL ]       public static class Ci {
+[FAIL ]         public static void ImportAndValidate() { /* ... */ }
+```
+
+判定规则（Unity 官方手册）：`-executeMethod <ClassName.MethodName>` 或
+`-executeMethod <NamespaceName.ClassName.MethodName>`；实现上按**最后一个点**切分，
+前半段是类全名（可带命名空间），后半段是方法名。方法必须是 **static**，且所在脚本要放在 **Editor 目录**。
+
+`test.yml` 与 `build.yml` 的第一步就跑这个预检 —— 配置错误要在 5 秒内暴露，而不是浪费一次完整导入。
+
+### 5.3 构建期对工程设置的临时改动
 
 出包会临时改 `PlayerSettings`（版本号、后端、分辨率）与 `QualitySettings`（档位参数）。
 脚本在构建前备份、构建后还原；还原前会比对文件修改时间：

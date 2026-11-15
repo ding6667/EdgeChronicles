@@ -13,6 +13,8 @@
 #   --unity <路径>         Unity 可执行文件路径（等价于设置 UNITY_PATH）
 #   --scenes "<a,b,c>"     指定构建场景（逗号分隔）。不给则读 EditorBuildSettings
 #   --non-strict           关闭严格门控（仅用于开发期自测包，不可用于发行）
+#   --allow-dirty          允许在非干净工作树上出包。只放宽溯源这一项
+#                          （manifest 会记 dirty=true），URP/场景等质量门控仍保持严格
 #   --no-stage-entrypoint  禁止注入构建入口（工程已自带同名入口时用）
 #   --dry-run              只做预检与计划输出，不调用 Unity
 #
@@ -51,6 +53,7 @@ UNITY_OVERRIDE=""
 SCENES_OVERRIDE=""
 STRICT="true"
 ALLOW_STAGE="true"
+ALLOW_DIRTY="false"
 DRY_RUN="false"
 
 STAGE_DIR=""
@@ -79,6 +82,7 @@ while [ $# -gt 0 ]; do
     --unity)             UNITY_OVERRIDE="${2:-}"; shift 2 ;;
     --scenes)            SCENES_OVERRIDE="${2:-}"; shift 2 ;;
     --non-strict)        STRICT="false"; shift ;;
+    --allow-dirty)       ALLOW_DIRTY="true"; shift ;;
     --no-stage-entrypoint) ALLOW_STAGE="false"; shift ;;
     --dry-run)           DRY_RUN="true"; shift ;;
     -h|--help)           usage; exit 0 ;;
@@ -176,8 +180,11 @@ if [ -n "$DIRTY_LIST" ]; then
   DIRTY="true"
   log_warn "工作树非干净，出包内容无法唯一对应到某个 commit："
   printf '%s\n' "$DIRTY_LIST" | head -20 | sed 's/^/         /' >&2
-  if [ "$STRICT" = "true" ]; then
-    die "$EXIT_SOURCE" "严格模式禁止在非干净工作树上出包。先提交（或用 --non-strict 出开发包）"
+  if [ "$STRICT" = "true" ] && [ "$ALLOW_DIRTY" != "true" ]; then
+    die "$EXIT_SOURCE" "严格模式禁止在非干净工作树上出包。先提交（或用 --allow-dirty 出溯源可查的开发包）"
+  fi
+  if [ "$ALLOW_DIRTY" = "true" ]; then
+    log_warn "已指定 --allow-dirty：本次出包来自非干净工作树，manifest 会记 source.dirty=true"
   fi
 fi
 log_info "commit: ${COMMIT:0:12}  分支: $BRANCH  工作树: $DIRTY"

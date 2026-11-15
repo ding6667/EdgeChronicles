@@ -67,6 +67,14 @@ jobs:
           lfs: true
           fetch-depth: 0
 
+      - name: CI 入口预检（executeMethod 必须指向真实存在的类型）
+        run: |
+          set -uo pipefail
+          bash Tools/build/ci-entrypoint-check.sh
+          rc=$?
+          echo "入口预检退出码: $rc"
+          exit $rc
+
       - name: 准备 Unity（解析路径 / 校验版本 / 激活许可证）
         run: |
           set -uo pipefail

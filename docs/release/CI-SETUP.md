@@ -128,6 +128,8 @@ cd C:\actions-runner
 
 **方式一（推荐，最快）**：仓库 → **Actions** → 选 `build` → 右上 **Run workflow** → 选分支 → 运行。
 
+> 流水线第一步是 **CI 入口预检**（`Tools/build/ci-entrypoint-check.sh`），不需要启动 Unity，几秒内就能判定 `Tools/ci/*.sh` 里引用的 `-executeMethod` 是否指向真实存在的类型。这一步红了 = CI 配置坏了，**不是**代码红绿问题，先修入口。
+
 **方式二**：本地推一个提交触发 `push` 事件。
 
 看 `build.yml` 的第一个步骤「准备 Unity（解析路径 / 校验版本 / 激活许可证）」是否变绿。它跑的是：
@@ -202,6 +204,7 @@ bash Tools/build/verify-artifact.sh Build/low-il2cpp-win64
 
 | 现象（日志原文） | 原因 | 处理 |
 |---|---|---|
+| **CI 入口预检失败**：`check-data.sh 引用的类型不存在: EdgeChronicles.Tools.Editor.Ci.ImportAndValidate` | `Tools/ci/*.sh` 的 `-executeMethod` 指向的类型在工程里不存在 | 按报错里给出的修法建出那个类型（通常是 `EdgeChronicles.Tools.Editor` 命名空间下的 `Ci` 门面类）；这是 **CI 配置问题**，不是被测代码的问题 |
 | `找不到 Unity：请设置仓库变量 UNITY_PATH` | 变量没设，且常见目录也没扫到 | 设 `UNITY_PATH` 变量 |
 | `UNITY_PATH 指向的文件不存在: E:\...` | 路径写错 / Unity 换了版本目录 | 核对 `E:\UnityHub\` 下的实际版本目录名 |
 | `Unity 版本不符：工程要求 2022.3.62f3c1，runner 上是 xxx` | runner 上的 Unity 版本不同 | 装同版本 Unity，或换一台机器 |
