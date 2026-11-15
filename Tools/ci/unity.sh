@@ -115,8 +115,13 @@ try:
 except OSError:
     sys.exit(1)
 sys.exit(0)" "$lockfile"
-      # 退出码 0 = 独占打开成功 = 残留锁文件（不占用）；1 = 被占用
-      return $?
+      local probe=$?
+      # python 退出码 0 = 锁文件打得开 = 残留锁文件 = 未占用；1 = 被 Unity 持锁 = 占用。
+      # 注意 shell 约定：函数返回 0 表示「是 / true」，故此处要反转。
+      if [ "$probe" -eq 0 ]; then
+        return 1
+      fi
+      return 0
     fi
   done
 

@@ -18,7 +18,7 @@
   L3 C# 词法：代码位置（字符串外）是否混入全角标点
   L4 编码：UTF-8 无 BOM + LF
   L5 纪律：源码里不得出现项目纪律禁止的那 7 个词（清单见本脚本 BANNED_WORDS，用码点构造以免自检脚本自己违反）
-  L6 判据自检：调用 qa_oracle_mirror.py 跑 43 条负向注入
+  L6 判据自检：调用 qa_oracle_mirror.py 跑 45 条负向注入
 
 用法：python docs/qa/qa_lint.py [工程根目录]
 退出码 0 = 通过；1 = 有问题。
@@ -327,7 +327,7 @@ def main():
             print("       " + p)
         return 1
     print("[OK   ] %d 个 .cs 通过静态自检（字符串 / 逗号 / 全角标点 / 编码 / 纪律词）；"
-          "43 条负向注入自检通过" % len(files))
+          "45 条负向注入自检通过" % len(files))
     return 0
 
 

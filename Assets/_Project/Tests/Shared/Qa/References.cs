@@ -352,7 +352,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "IMPL-v2.0.md §5 断言 A29：连段模拟不产生负资源",
                 SourceB = "GDD-v1.0.md §9.1 / IMPL-v2.0.md §9.1：锋芒上限 5 层、命中按表给层单次 ≤1、8 秒未获新层则每 2 秒掉 1 层",
                 Impact = "没有规定连段序列与时间步长，A29 的执行结果不可复现——不同的模拟序列会得出相反的结论（同一串招在 8 秒内打完不衰减，拖过 8 秒就衰减）。判据必须先固定一条**标准连段序列 + 时间步长**，否则它是不可判定的。",
-                Resolution = "Registered"
+                Resolution = "Registered · 待裁：A29「连段模拟」没有定义模拟序列与时间步长 → 判据不可复现。需给出一条标准连段序列（含资源给层与 8 秒衰减的时间步长），或明确 A29 由生产侧按指定序列执行。"
             },
             new SpecConflict
             {

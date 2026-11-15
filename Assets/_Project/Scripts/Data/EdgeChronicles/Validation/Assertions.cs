@@ -623,7 +623,7 @@ namespace EdgeChronicles.Data.Validation
             };
 
             int fixtureFailures = 0;
-            foreach (var f in fixtures)
+            foreach (var f in fixture)
             {
                 bool active = ResolveStarLinkState(f.nodeAUnlocked, f.nodeBUnlocked, f.sameSeries);
                 if (active != f.expectActive)
@@ -640,7 +640,7 @@ namespace EdgeChronicles.Data.Validation
                         $"夹具「{f.name}」期望加成 {f.expectBonus}，实际 {bonus}");
                 }
             }
-            return $"检查 {links.Rows.Count} 条连携 + {fixtures.Count} 档动态夹具（失败 {fixtureFailures}）";
+            return $"检查 {links.Rows.Count} 条连携 + {fixture.Count} 档动态夹具（失败 {fixtureFailures}）";
         }
 
         private struct Fixture
@@ -805,7 +805,6 @@ namespace EdgeChronicles.Data.Validation
             var tiers = set.Get("tech_tier");
             if (tiers == null) return Missing(set, report, "tech_tier");
 
-            var catalog = DerivativeCatalog.All;
             var perSkill = new Dictionary<string, int>(StringComparer.Ordinal);
 
             foreach (var bound in tiers.Rows)
@@ -813,11 +812,6 @@ namespace EdgeChronicles.Data.Validation
                 var row = bound.As<TechTierRow>();
                 if (row == null) continue;
 
-                if (string.Equals(row.unlock_type, "derivative", StringComparison.Ordinal))
-                {
-                    // 记录每个技能的「派生类型」所在阶位（用于诊断与报告，不作判定条件）
-                    derivativeTier[row.skill_id] = row.tier;
-                }
             }
 
             foreach (var bound in tiers.Rows)
@@ -825,7 +819,7 @@ namespace EdgeChronicles.Data.Validation
                 var row = bound.As<TechTierRow>();
                 if (row == null || string.IsNullOrEmpty(row.unlock_derivative_id)) continue;
 
-                if (!catalog.Contains(row.unlock_derivative_id))
+                if (!DerivativeCatalog.Contains(row.unlock_derivative_id))
                 {
                     report.Error("A33-2", "tech_tier", bound.Key, "unlock_derivative_id",
                         "派生 id 不在 IMPL-v3.0.md §4.8.5 的 8 条清单内：" + row.unlock_derivative_id);
@@ -1229,7 +1223,7 @@ namespace EdgeChronicles.Data.Validation
             }
 
             int checkedKeys = 0;
-            foreach (var pair in sources)
+            foreach (var pair in sources.Entries)
             {
                 if (!EffectMerge.IsCapKey(pair.Key)) continue;
                 checkedKeys++;
@@ -1258,7 +1252,7 @@ namespace EdgeChronicles.Data.Validation
             }
 
             int checkedKeys = 0;
-            foreach (var pair in sources)
+            foreach (var pair in sources.Entries)
             {
                 if (!EffectMerge.IsReduceKey(pair.Key)) continue;
                 checkedKeys++;
@@ -1286,7 +1280,7 @@ namespace EdgeChronicles.Data.Validation
             }
 
             int checkedKeys = 0;
-            foreach (var pair in sources)
+            foreach (var pair in sources.Entries)
             {
                 if (EffectMerge.IsCapKey(pair.Key) || EffectMerge.IsReduceKey(pair.Key)) continue;
                 checkedKeys++;

@@ -36,8 +36,15 @@ def main():
         if not (cid and res):
             continue
         r = res.group(1)
-        state = "已修" if r.startswith("Resolved") else ("待裁" if r.startswith("Pending") else "待定")
-        rows.append("| `%s` | %s | %s |" % (cid.group(1), first_sentence(r), state))
+        state = "已修" if r.startswith("Resolved") else ("待复核" if r.startswith("Pending") else "未裁")
+        concl = first_sentence(r)
+        for pre in ("Resolved · ", "Pending · ", "Registered"):
+            if concl.startswith(pre):
+                concl = concl[len(pre):]
+                break
+        rows.append((cid.group(1), "| `%s` | %s | %s |" % (cid.group(1), concl, state)))
+    rows.sort(key=lambda x: (len(x[0]), x[0]))
+    rows = [r[1] for r in rows]
 
     body = """# EC-S1-QA-01 · 状态说明（2026-11-15）
 

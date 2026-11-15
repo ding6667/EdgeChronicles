@@ -17,7 +17,7 @@ namespace EdgeChronicles.Data.Validation
         public string Key;
 
         /// <summary>源数据里出现过的列原值（派生列比对用；key = snake_case 列名）。</summary>
-        public readonly Dictionary<string, JsonValue> Source = new Dictionary<string, JsonValue>(StringComparer.Ordinal);
+        public Dictionary<string, JsonValue> Source = new Dictionary<string, JsonValue>(StringComparer.Ordinal);
 
         /// <summary>取绑定后的 POCO（泛型）。</summary>
         public T As<T>() where T : class
