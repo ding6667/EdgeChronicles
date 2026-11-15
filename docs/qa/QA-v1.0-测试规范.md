@@ -247,7 +247,7 @@ Assets/_Project/Tests/
 | 对象初始化器里 `Veto = false` 少一个逗号（7 处） | 同上 | `qa_lint.py` L2 |
 | 代码位置混入全角标点 | 同上 | `qa_lint.py` L3 |
 | 文件存成 CRLF / 带 BOM | 中文与符号乱码 | `qa_lint.py` L4 |
-| 源码里出现 TODO / 待定 / 工期 / 成本 / 人日 / 预算 / 排期 | 违反项目纪律 | `qa_lint.py` L5 |
+| 源码里出现项目纪律禁止的那 7 个词（清单见 `qa_lint.py` 的 `BANNED_WORDS`） | 违反项目纪律 | `qa_lint.py` L5 |
 | 改了字段名、另一处还在用旧名（或加了字段但没加声明） | 编译失败，报得晚 | `qa_lint.py` L7 |
 | 判据逻辑被改坏而没人发现 | **判据永远报绿** | `qa_oracle_mirror.py`（43 条负向注入） |
 

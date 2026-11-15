@@ -162,6 +162,28 @@ Assets/_Project/Art/
 > 位移一律用 **m/s**，不用 m/帧（GDD 附录的量纲教训：30fps 下 m/帧 会直接翻倍）。
 > `movement_curve.keys` 的口径 = **逐帧速度（m/s，非归一化）**，与上条同口径。
 
+**逐条清单（14 条，机器可数）** —— 表里 `ATK_01/02/03` 与 `SKL_01…08` 是合并写法，直接正则数会得到 8；**以本行为准**：
+
+```
+MP_HERO_IDLE
+MP_HERO_MOVE
+MP_HERO_ATK_01
+MP_HERO_ATK_02
+MP_HERO_ATK_03
+MP_HERO_DODGE
+MP_HERO_SKL_01
+MP_HERO_SKL_02
+MP_HERO_SKL_03
+MP_HERO_SKL_04
+MP_HERO_SKL_05
+MP_HERO_SKL_06
+MP_HERO_SKL_07
+MP_HERO_SKL_08
+```
+
+> 这 14 条 ↔ IMPL §1.3 的 14 个 `curve_id`（`mc_idle` / `mc_move` / `mc_atk_01..03` / `mc_dodge` / `mc_skill_01..08`）**一一对应，无孤儿**。
+> **条数已冻结为 14**：不在此清单上的 `MP_HERO_*` 一律不是本项目的资产 —— 新增位移曲线必须先改 IMPL §1.3 与本表两处，不能只在一处加。
+
 **闪避曲线的人工验收（不可省）**
 
 | 判据 | 内容 | 出处 |

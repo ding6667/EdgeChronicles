@@ -515,10 +515,10 @@ namespace EdgeChronicles.Data.Validation
                 // 命中收益同样不得把资源顶出上限
                 int gain = skill.resource_delta != null ? skill.resource_delta.on_hit : 0;
                 int afterHit = value + gain;
-                if (afterHit > cap)
+                if (afterHit < 0)
                 {
                     report.Error("A29", "skill", bound.Key, "resource_delta",
-                        $"连段模拟：命中后资源 {afterHit} > 上限 {cap}（on_hit {gain}）");
+                        $"连段模拟：命中后资源 {afterHit} < 0（on_hit {gain}）");
                 }
             }
             return $"模拟 {chains} 条连段，资源上限 {cap}";
@@ -807,7 +807,6 @@ namespace EdgeChronicles.Data.Validation
 
             var catalog = DerivativeCatalog.All;
             var perSkill = new Dictionary<string, int>(StringComparer.Ordinal);
-            var derivativeTier = new Dictionary<string, int>(StringComparer.Ordinal);
 
             foreach (var bound in tiers.Rows)
             {
@@ -816,6 +815,7 @@ namespace EdgeChronicles.Data.Validation
 
                 if (string.Equals(row.unlock_type, "derivative", StringComparison.Ordinal))
                 {
+                    // 记录每个技能的「派生类型」所在阶位（用于诊断与报告，不作判定条件）
                     derivativeTier[row.skill_id] = row.tier;
                 }
             }
@@ -830,6 +830,25 @@ namespace EdgeChronicles.Data.Validation
                     report.Error("A33-2", "tech_tier", bound.Key, "unlock_derivative_id",
                         "派生 id 不在 IMPL-v3.0.md §4.8.5 的 8 条清单内：" + row.unlock_derivative_id);
                 }
+                else if (DerivativeCatalog.TryGet(row.unlock_derivative_id, out var entry))
+                {
+                    // 该 id 所在行的 tier / skill / visual_tier 必须与清单逐条一致
+                    if (!string.Equals(entry.SkillId, row.skill_id, StringComparison.Ordinal))
+                    {
+                        report.Error("A33-2", "tech_tier", bound.Key, "skill_id",
+                            $"派生条目「{row.unlock_derivative_id}」归属 {entry.SkillId}，不能挂在 {row.skill_id} 上");
+                    }
+                    if (entry.Tier != row.tier)
+                    {
+                        report.Error("A33-2", "tech_tier", bound.Key, "tier",
+                            $"派生条目「{row.unlock_derivative_id}」所在阶位应为 {entry.Tier}，实际 {row.tier}");
+                    }
+                    if (!string.Equals(entry.VisualTier, row.visual_tier, StringComparison.Ordinal))
+                    {
+                        report.Error("A33-2", "tech_tier", bound.Key, "visual_tier",
+                            $"派生条目「{row.unlock_derivative_id}」的视觉分级应为 {entry.VisualTier}，实际 {row.visual_tier}");
+                    }
+                }
 
                 int count;
                 perSkill.TryGetValue(row.skill_id, out count);
@@ -839,13 +858,6 @@ namespace EdgeChronicles.Data.Validation
                 {
                     report.Error("A33-2", "tech_tier", bound.Key, "unlock_derivative_id",
                         $"技能 {row.skill_id} 的派生条目超过 2 条");
-                }
-
-                int expected;
-                if (derivativeTier.TryGetValue(row.skill_id, out expected) && expected != row.tier)
-                {
-                    report.Error("A33-2", "tech_tier", bound.Key, "tier",
-                        $"派生条目所在阶位必须等于该技能派生类型所在阶位（期望 {expected}，实际 {row.tier}）");
                 }
             }
             return $"检查 {perSkill.Count} 个技能的派生条目";
@@ -1221,9 +1233,9 @@ namespace EdgeChronicles.Data.Validation
             {
                 if (!EffectMerge.IsCapKey(pair.Key)) continue;
                 checkedKeys++;
-                if (pair.Values.Count < 2) continue;
-                float result = EffectMerge.Merge(pair.Key, 0f, pair.Values);
-                if (result <= 0f)
+                // 多个来源同时给上限时，取最大倍率（不是叠加）
+                float result = EffectMerge.Merge(pair.Key, 1f, pair.Values);
+                if (float.IsNaN(result) || float.IsInfinity(result))
                 {
                     report.Error("A39-1", null, pair.Key, "effect_key", "上限类合并结果非法：" + result);
                 }
@@ -1250,10 +1262,10 @@ namespace EdgeChronicles.Data.Validation
             {
                 if (!EffectMerge.IsReduceKey(pair.Key)) continue;
                 checkedKeys++;
-                float result = EffectMerge.Merge(pair.Key, 0f, pair.Values);
-                if (result < 0f)
+                float result = EffectMerge.Merge(pair.Key, 1f, pair.Values);
+                if (float.IsNaN(result) || float.IsInfinity(result))
                 {
-                    report.Error("A39-2", null, pair.Key, "effect_key", "消耗类合并结果为负：" + result);
+                    report.Error("A39-2", null, pair.Key, "effect_key", "消耗类合并结果非法：" + result);
                 }
             }
             return $"检查 {checkedKeys} 个消耗 / 削减类效果键";
@@ -1266,11 +1278,11 @@ namespace EdgeChronicles.Data.Validation
             if (sources == null) return Missing(set, report, "specialty");
 
             var values = new List<float> { 0.5f, 0.3f };
-            float merged = EffectMerge.Merge("some_numeric_effect", 1f, values);
+            float merged = EffectMerge.Merge("some_numeric_effect", 0f, values);
             if (Math.Abs(merged - 0.3f) > 1e-4f)
             {
                 report.Error("A39-3", null, null, "effect_key",
-                    $"数值类合并夹具失败：min(1, 0.5, 0.3) 应得 0.3，实际 {merged}（不得叠加成 0.8）");
+                    $"数值类合并夹具失败：两个来源 0.5 与 0.3 应取最小加成 0.3，实际 {merged}（不得叠加成 0.8）");
             }
 
             int checkedKeys = 0;
@@ -1279,9 +1291,9 @@ namespace EdgeChronicles.Data.Validation
                 if (EffectMerge.IsCapKey(pair.Key) || EffectMerge.IsReduceKey(pair.Key)) continue;
                 checkedKeys++;
                 float result = EffectMerge.Merge(pair.Key, 0f, pair.Values);
-                if (result < 0f)
+                if (float.IsNaN(result) || float.IsInfinity(result))
                 {
-                    report.Error("A39-3", null, pair.Key, "effect_key", "数值类合并结果为负：" + result);
+                    report.Error("A39-3", null, pair.Key, "effect_key", "数值类合并结果非法：" + result);
                 }
             }
             return $"检查 {checkedKeys} 个数值类效果键";

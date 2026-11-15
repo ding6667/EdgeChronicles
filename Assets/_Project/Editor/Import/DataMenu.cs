@@ -18,7 +18,7 @@ namespace EdgeChronicles.Tools.Editor.Import
         public static void ImportAndValidate()
         {
             var outcome = TableImportPipeline.Run(TableImportPipeline.SourceDir, TableImportPipeline.OutputDir, true);
-            Ci.ReportWriter.Print("import", outcome);
+            EdgeChronicles.Tools.Editor.Ci.ReportWriter.Print("import", outcome);
 
             if (outcome.Succeeded)
             {
@@ -35,7 +35,7 @@ namespace EdgeChronicles.Tools.Editor.Import
         public static void AuditOnly()
         {
             var outcome = TableImportPipeline.Run(TableImportPipeline.SourceDir, null, false);
-            Ci.ReportWriter.Print("audit", outcome);
+            EdgeChronicles.Tools.Editor.Ci.ReportWriter.Print("audit", outcome);
         }
 
         /// <summary>打开源数据目录。</summary>

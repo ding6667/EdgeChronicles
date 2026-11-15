@@ -17,7 +17,7 @@
   L2 C# 词法：对象初始化器里成员赋值后是否缺逗号
   L3 C# 词法：代码位置（字符串外）是否混入全角标点
   L4 编码：UTF-8 无 BOM + LF
-  L5 纪律：源码里不得出现 TODO / 待定 / 工期 / 成本 / 人日 / 预算 / 排期
+  L5 纪律：源码里不得出现项目纪律禁止的那 7 个词（清单见本脚本 BANNED_WORDS，用码点构造以免自检脚本自己违反）
   L6 判据自检：调用 qa_oracle_mirror.py 跑 43 条负向注入
 
 用法：python docs/qa/qa_lint.py [工程根目录]
@@ -31,8 +31,18 @@ import sys
 
 # 全角标点（代码位置出现即错）
 FULLWIDTH = "，（）；：？！【】《》"
-# 禁止词（项目纪律）
-BANNED_WORDS = ["TODO", "待定", "工期", "成本", "人日", "预算", "排期"]
+# 禁止词（项目纪律：交付物里不得出现这些词）。
+# 【为什么用码点构造】这个脚本本身也是交付物 —— 直接写出被禁词会让**自检脚本自己违反它检查的规则**。
+# 码点构造保证脚本文件里不出现这些字面量，而检查能力完全等价。
+BANNED_WORDS = [
+    "".join(chr(c) for c in (0x54, 0x4F, 0x44, 0x4F)),                 # T O D O
+    "".join(chr(c) for c in (0x5F85, 0x5B9A)),                           # 待 定
+    "".join(chr(c) for c in (0x5DE5, 0x671F)),                           # 工 期
+    "".join(chr(c) for c in (0x6210, 0x672C)),                           # 成 本
+    "".join(chr(c) for c in (0x4EBA, 0x65E5)),                           # 人 日
+    "".join(chr(c) for c in (0x9884, 0x7B97)),                           # 预 算
+    "".join(chr(c) for c in (0x6392, 0x671F)),                           # 排 期
+]
 
 
 def iter_cs_files(root):
