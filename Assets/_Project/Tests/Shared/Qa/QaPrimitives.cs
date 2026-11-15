@@ -270,6 +270,16 @@ namespace EdgeChronicles.Tests.Qa
         public const int InkOutlinePx = 3;
         public const float InkContrastMin = 0.6f;
 
+        // ── hold 可达性探针（D-14 第三条路） ────────────────────────────
+        // 用途：保证 hold 区间的**上下限永远可测**——
+        // 即"存在低于下限的可达构造"与"存在高于上限的可达构造"始终成立。
+        // 若有人收窄了合法构造空间（例如把 hitstun 限死在 18–22），
+        // 负向用例就会失去着力点 —— 这条断言会先红并提醒更新。
+        public const int HoldProbeHitstunMin = 12;
+        public const int HoldProbeHitstunMax = 30;
+        public const int HoldProbeClipMinC = 1;
+        public const int HoldProbeClipMaxC = 30;
+
         // ── 受击变体（GDD §7.3） ─────────────────────────────────────────
         public const float HitClipContactHeightMinCm = 3.0f;
         public const int HitClipContactFramesMin = 2;

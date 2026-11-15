@@ -31,7 +31,10 @@
 - **影响断言**：无（现有断言不依赖角度语义）。
 - **谁复核**：engineering-lead（v2.0 归属）。
 
-### D-02 / D-13 · `movement_curve.keys` 的量纲 —— ⚠️ **已由主理人用证据推翻并终裁**（初裁"归一化位移占比"**作废**）
+### D-02 / D-13 · `movement_curve.keys` 的量纲 —— ✅ **现行裁定 = 逐帧速度（m/s，非归一化）**
+
+> **现行裁定（本段其余部分是「初裁 + 推翻过程」的历史记录，不是现行的裁定）**：`keys` = **逐帧速度（m/s，非归一化）**；**A24 = `\|integralDistance − distance\| ÷ distance ≤ 5%`**（`integralDistance = Σ(keys_i × dt_i)`，`dt_i = 1 ÷ 逻辑时钟频率`）；**不写「Σkeys = 1」**。**以 `IMPL-v3.0.md` §1.3 与 `IMPL-v2.0.md` §5 为准。**
+> **后续要求**：QA 的双口径开关**切到速度口径后删掉占比路径**（两套长期并存就是第三个真值源）；工程侧 `Data.CurveKey.value` 注释**按终裁改**——**收口时只留终裁版本**（过程里改几次不是问题，收口不唯一才是问题）。
 
 - **终裁**：`keys[i]` = **逐帧速度（m/s，非归一化）**。**不写「Σkeys = 1」断言**——速度语义下速度之和不等于任何固定值，该断言没有意义。
 - **终裁 A24**：`|integralDistance − distance| ÷ distance ≤ 5%`，`integralDistance = Σ(keys_i × dt_i)`，`dt_i = 1 ÷ 逻辑时钟频率`（取自 `global_tuning`）。

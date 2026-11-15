@@ -48,7 +48,8 @@ namespace EdgeChronicles.Tests.Qa
         public const string A43 = "A43"; // 图集格位配额（两层）
 
         // ── 打击感 / 可读性判据编号 ──
-        public const string FHold = "F-HOLD";            // hold ∈ [2,4] 帧
+        public const string FHold = "F-HOLD";            // hold ∈ [2,4] 帧（设计意图区间）
+        public const string FHoldReachable = "F-HOLD-REACHABLE"; // hold 区间上下限必须永远可测
         public const string FHitstopCausal = "F-HITSTOP-CAUSAL"; // 0.15 × hitstop_frames ≤ 1
         public const string FRecoveryGap = "F-RECOVERY-GAP";     // T(归零)+2 ≤ T(收身)
         public const string FKbTier = "F-KB-TIER";         // 击退距离落在档位区间
@@ -552,6 +553,31 @@ namespace EdgeChronicles.Tests.Qa
                 if (computed < 0f) { v.Add(FHold); continue; }
                 if (computed < CombatSpec.HoldDurationMin || computed > CombatSpec.HoldDurationMax) { v.Add(FHold); continue; }
                 if (Math.Abs(k.HoldDuration - computed) > 0.05f) { v.Add(FHold); }
+            }
+
+            // F-HOLD-REACHABLE：【D-14 第三条路】判据区间的上下限必须**永远可测**。
+            // 做法：在**合法构造空间**内枚举 hold 的可达值，确认同时存在
+            //   ① 低于下限的可达值（负向用例 NC-A15 的着力点）
+            //   ② 高于上限的可达值（负向用例 S-14 的着力点）
+            // 只要有人收窄了构造空间（例如把 hitstun 限死），这两条负向用例就会失效，
+            // 本断言先红并提醒更新 —— 防止出现"永远无法被证伪的用例"。
+            {
+                bool belowReachable = false;
+                bool aboveReachable = false;
+                for (int hitstun = CombatSpec.HoldProbeHitstunMin; hitstun <= CombatSpec.HoldProbeHitstunMax && !(belowReachable && aboveReachable); hitstun++)
+                {
+                    for (int clip = CombatSpec.HoldProbeClipMinC; clip <= CombatSpec.HoldProbeClipMaxC && !(belowReachable && aboveReachable); clip++)
+                    {
+                        for (int hitstop = 2; hitstop <= 6; hitstop += 2)
+                        {
+                            float hold = hitstun - clip - hitstop * (1f - CombatSpec.HitstopTimeScale);
+                            if (hold < CombatSpec.HoldDurationMin) { belowReachable = true; }
+                            if (hold > CombatSpec.HoldDurationMax) { aboveReachable = true; }
+                            if (belowReachable && aboveReachable) { break; }
+                        }
+                    }
+                }
+                if (!belowReachable || !aboveReachable) { v.Add(FHoldReachable); }
             }
 
             // F-HITSTOP-CAUSAL：0.15 × hitstop_frames ≤ 1（因果式，不是"≤6"）

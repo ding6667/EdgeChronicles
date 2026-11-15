@@ -256,7 +256,17 @@ namespace EdgeChronicles.Tests.Qa
         NormalizedDistanceShare = 1
     }
 
-    /// <summary>当前生效的曲线口径。默认取主理人裁定。</summary>
+    /// <summary>
+    /// 当前生效的曲线口径。
+    ///
+    /// 【已裁定 · 2026】**逐帧速度（m/s，非归一化）** —— 主理人与设计线两票一致
+    /// （设计线已撤回归一化方案：美术规格写死 `MP_HERO_*` 单位为 m/s，
+    ///  且归一化方案下 `distance` 根本不进断言，A24 会退化成格式检查）。
+    ///
+    /// 归一化口径仍保留在枚举里：它是**已归档的备选方案**，
+    /// 保留它是为了让"当年为什么这么裁"在代码里可查，而不是只剩一句结论。
+    /// 切换它只需改 `Current` 一个值 —— 判据形式两边一致，基线也按当前口径生成。
+    /// </summary>
     public static class CurveSemantics
     {
         public static CurveKeySemantics Current = CurveKeySemantics.SpeedMetersPerSecond;

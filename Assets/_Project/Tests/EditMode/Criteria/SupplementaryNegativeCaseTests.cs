@@ -91,6 +91,33 @@ namespace EdgeChronicles.Tests.Criteria
                     }
                     return;
 
+                case "S-14": // hold 高于上限（可达值 4.8）
+                    // 【D-14 第三条路】与 NC-A15（低于下限）配对：
+                    // 两条都必须用**可达**值，不用恰好等于 2.0 / 4.0 的端点。
+                    // 重档硬直 22 → 23 帧 → hold = 23 − 13 − 6×0.85 = 4.8 > 4 → 必须报红。
+                    for (int i = 0; i < s.Knockbacks.Count; i++)
+                    {
+                        if (s.Knockbacks[i].Tier == KnockbackTier.Heavy)
+                        {
+                            s.Knockbacks[i].HitstunFrames = 23;
+                            s.Knockbacks[i].HoldDuration = s.Knockbacks[i].ComputedHold();
+                        }
+                    }
+                    return;
+
+                case "S-15": // hold 重算为负（D-04：换算后 hold < 0 必须报错，不取 0）
+                    for (int i = 0; i < s.Knockbacks.Count; i++)
+                    {
+                        if (s.Knockbacks[i].Tier == KnockbackTier.Light)
+                        {
+                            // 受击剪辑加长到 17 C 帧 @60fps → clip_W = 17
+                            // → hold = 18 − 17 − 2×0.85 = −0.7 < 0
+                            s.Knockbacks[i].AnimClipLengthC = 17;
+                            s.Knockbacks[i].HoldDuration = s.Knockbacks[i].ComputedHold();
+                        }
+                    }
+                    return;
+
                 case "S-13": // A39-2：数值类多来源被相加（应取最小不叠加）
                     for (int i = 0; i < s.EffectMerges.Count; i++)
                     {
@@ -118,7 +145,7 @@ namespace EdgeChronicles.Tests.Criteria
         private static readonly string[] Ids =
         {
             "S-01", "S-02", "S-03", "S-04", "S-05", "S-06", "S-07", "S-08",
-            "S-09", "S-10", "S-11", "S-12", "S-13"
+            "S-09", "S-10", "S-11", "S-12", "S-13", "S-14", "S-15"
         };
 
         [Test]
