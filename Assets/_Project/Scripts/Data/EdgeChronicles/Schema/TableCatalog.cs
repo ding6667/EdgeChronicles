@@ -95,7 +95,8 @@ namespace EdgeChronicles.Data.Schema
                 new ColumnSpec("state_id", ColumnType.String, true),
                 new ColumnSpec("skill_id", ColumnType.String, true, foreignTable: "skill", foreignColumn: "skill_id"),
                 new ColumnSpec("buff_id", ColumnType.String, true),
-                new ColumnSpec("duration_frames", ColumnType.Int, true, min: 1),
+                new ColumnSpec("duration_frames", ColumnType.Int, true, min: 0,
+                    note: "0 = 跟随前置状态的条件型增益（非定时状态）；定时状态填帧数"),
                 new ColumnSpec("conditions", ColumnType.StringArray, false)));
 
             list.Add(new TableSchema("enemy", typeof(EnemyRow), false, new[] { "enemy_id" },
@@ -149,7 +150,8 @@ namespace EdgeChronicles.Data.Schema
                 new ColumnSpec("target_system", ColumnType.String, false, allowed: EnumCatalog.TargetSystemValues),
                 new ColumnSpec("reset_policy", ColumnType.String, false, allowed: EnumCatalog.ResetPolicyValues),
                 new ColumnSpec("reset_cost", ColumnType.Int, false, min: 0, max: 200),
-                new ColumnSpec("fame_unlock_tier", ColumnType.Int, false, min: 1, max: 5),
+                new ColumnSpec("fame_unlock_tier", ColumnType.Int, false, min: 1, max: 5,
+                    conditionalField: "kind", conditionalValue: "fame", note: "名望档位编号，仅 kind=fame 的行适用"),
                 new ColumnSpec("fame_lv_min", ColumnType.Int, false, min: 1, max: 10, derived: true),
                 new ColumnSpec("fame_lv_max", ColumnType.Int, false, min: 1, max: 10, derived: true),
                 new ColumnSpec("fame_source", ColumnType.String, false, allowed: EnumCatalog.FameSourceValues),
@@ -166,7 +168,8 @@ namespace EdgeChronicles.Data.Schema
                 new ColumnSpec("unlock_tier", ColumnType.Int, true, min: 1, max: 5),
                 new ColumnSpec("cost_eu", ColumnType.Int, true, min: 1, max: 60),
                 new ColumnSpec("effect_key", ColumnType.String),
-                new ColumnSpec("effect_value", ColumnType.Float, false, min: 0.01, max: 1.00),
+                new ColumnSpec("effect_value", ColumnType.Float, false, min: 0.01, max: 1.00,
+                    conditionalField: "effect_key", note: "系数域；仅 effect_key 非空的行适用（与 mechanic_mod 互斥）"),
                 new ColumnSpec("node_type", ColumnType.String, true, allowed: EnumCatalog.StarNodeTypeValues,
                     note: "离散 / 次数 / 帧 / 机制；C6 复算消耗的类型系数输入"),
                 new ColumnSpec("mechanic_mod", ColumnType.String),
@@ -196,7 +199,8 @@ namespace EdgeChronicles.Data.Schema
                 new ColumnSpec("pending_rule_key", ColumnType.String, false, foreignTable: "core_link", foreignColumn: "state_id"),
                 new ColumnSpec("mechanic_targets", ColumnType.StringArray, false),
                 new ColumnSpec("stat_key", ColumnType.String),
-                new ColumnSpec("stat_value", ColumnType.Float, false, min: 0.01, max: 1.00),
+                new ColumnSpec("stat_value", ColumnType.Float, false, min: 0.01, max: 1.00,
+                    conditionalField: "stat_key", note: "系数域；仅 stat_key 非空的行适用"),
                 new ColumnSpec("cum_cost_eu", ColumnType.Int, false, derived: true),
                 new ColumnSpec("effective_mods", ColumnType.KeyFloatArray, false, derived: true)));
 

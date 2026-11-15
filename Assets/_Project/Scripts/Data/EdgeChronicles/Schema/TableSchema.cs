@@ -61,6 +61,18 @@ namespace EdgeChronicles.Data.Schema
         /// <summary>是否派生列（禁手填）。</summary>
         public bool Derived;
 
+        /// <summary>
+        /// 值域/枚举的<b>生效条件</b>：本列只有在「<see cref="ConditionalField"/> 满足条件」时才参与校验。
+        /// <para>
+        /// 条件列（如 <c>fame_unlock_tier</c> 只对 kind=fame 的行有意义）在不适用的行上取 0 / 空串，
+        /// 若一律按值域判定，会把「这一行本来就不适用」判成越界。
+        /// </para>
+        /// </summary>
+        public string ConditionalField;
+
+        /// <summary>条件值：非空 = 该字段必须等于它；为空 = 该字段必须非空。</summary>
+        public string ConditionalValue;
+
         /// <summary>备注（口径说明）。</summary>
         public string Note;
 
@@ -74,8 +86,12 @@ namespace EdgeChronicles.Data.Schema
             string foreignTable = null,
             string foreignColumn = null,
             bool derived = false,
-            string note = null)
+            string note = null,
+            string conditionalField = null,
+            string conditionalValue = null)
         {
+            ConditionalField = conditionalField;
+            ConditionalValue = conditionalValue;
             Name = name;
             Type = type;
             Required = required;

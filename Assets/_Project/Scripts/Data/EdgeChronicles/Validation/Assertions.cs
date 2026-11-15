@@ -1069,6 +1069,19 @@ namespace EdgeChronicles.Data.Validation
                 var field = row.GetType().GetField(column);
                 if (field == null) continue;
                 var value = field.GetValue(row) as string;
+
+                // 互斥：效果键与机制修改项不得同时出现（EL-03 §1.1 / §1.5）
+                var effectKeyField = row.GetType().GetField("effect_key");
+                if (effectKeyField != null && !string.IsNullOrEmpty(value))
+                {
+                    var effectKey = effectKeyField.GetValue(row) as string;
+                    if (!string.IsNullOrEmpty(effectKey))
+                    {
+                        report.Error("A35", tableName, bound.Key, "effect_key",
+                            $"机制项「{value}」与效果键「{effectKey}」互斥，只能二选一");
+                    }
+                }
+
                 if (string.IsNullOrEmpty(value)) continue;   // 空串 = 无修改，合法
 
                 count++;

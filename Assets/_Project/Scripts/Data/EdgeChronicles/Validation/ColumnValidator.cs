@@ -23,6 +23,12 @@ namespace EdgeChronicles.Data.Validation
                     var field = table.Schema.RowType.GetField(column.Name, BindingFlags.Public | BindingFlags.Instance);
                     if (field == null) continue;
 
+                    // 条件列：本行不满足条件时，值域与枚举都不参与判定
+                    if (!string.IsNullOrEmpty(column.ConditionalField) && !ConditionHolds(table, bound, column))
+                    {
+                        continue;
+                    }
+
                     var value = field.GetValue(bound.Row);
                     if (value == null)
                     {
@@ -55,6 +61,10 @@ namespace EdgeChronicles.Data.Validation
                     }
                     else if (value is int intValue)
                     {
+                        // 派生列的值域由对应断言判定（例如 A43 的格位配额），
+                        // 列级校验只管「手填值合不合法」——派生值不是手填的。
+                        if (column.Derived) continue;
+
                         if (column.Min.HasValue && intValue < column.Min.Value)
                         {
                             report.Error("RANGE", table.Name, bound.Key, column.Name,
@@ -68,6 +78,8 @@ namespace EdgeChronicles.Data.Validation
                     }
                     else if (value is float floatValue)
                     {
+                        if (column.Derived) continue;
+
                         if (column.Min.HasValue && floatValue < column.Min.Value - 1e-6f)
                         {
                             report.Error("RANGE", table.Name, bound.Key, column.Name,
@@ -93,6 +105,24 @@ namespace EdgeChronicles.Data.Validation
                     }
                 }
             }
+        }
+
+        /// <summary>条件列的适用性判定。</summary>
+        private static bool ConditionHolds(TableData table, BoundRow bound, ColumnSpec column)
+        {
+            var field = table.Schema.RowType.GetField(column.ConditionalField, BindingFlags.Public | BindingFlags.Instance);
+            if (field == null) return true;
+
+            var value = field.GetValue(bound.Row);
+            string text = value as string;
+            if (text != null)
+            {
+                return string.IsNullOrEmpty(column.ConditionalValue)
+                    ? text.Length > 0
+                    : string.Equals(text, column.ConditionalValue, StringComparison.Ordinal);
+            }
+
+            return true;
         }
 
         private static bool IsRequiredType(ColumnType type)

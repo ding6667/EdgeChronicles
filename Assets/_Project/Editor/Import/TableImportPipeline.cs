@@ -112,14 +112,16 @@ namespace EdgeChronicles.Tools.Editor.Import
                 outcome.TablesLoaded++;
             }
 
+            // L1：派生重算（禁手填：手填值与重算值不等即 error）
+            //      **必须排在列级校验之前**：派生列的值此时才是最终值，
+            //      否则校验器会拿「尚未重算的 0」去比下界，把工具自己算出来的列判成越界。
+            Derivation.DeriveAll(outcome.Tables, outcome.Report);
+
             // L1：列级校验
             foreach (var table in outcome.Tables.All)
             {
                 ColumnValidator.Validate(table, outcome.Report);
             }
-
-            // L1：派生重算（禁手填：手填值与重算值不等即 error）
-            Derivation.DeriveAll(outcome.Tables, outcome.Report);
 
             // L1 + L2：断言
             Assertions.RunAll(outcome.Tables, outcome.Report);

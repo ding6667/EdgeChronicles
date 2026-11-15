@@ -363,6 +363,14 @@ else
   STAGE_FILE="$STAGE_DIR/EdgeChronicles.ReleaseOps.Editor.cs"
   STAGE_META="$STAGE_FILE.meta"
   STAGE_DIR_META="$STAGE_DIR.meta"
+  # 自愈：上一次构建若被强杀（SIGKILL，trap 不执行）会留下注入残留，
+  #       这里先清干净再注入，避免工作树长期带残留。
+  if [ -f "$STAGE_FILE" ]; then
+    log_warn "发现上次构建遗留的注入文件（上次构建被强制中止），已清理: $STAGE_FILE"
+    rm -f "$STAGE_FILE" "$STAGE_META" 2>/dev/null || true
+    rmdir "$STAGE_DIR" 2>/dev/null || true
+    rm -f "$STAGE_DIR_META" 2>/dev/null || true
+  fi
   mkdir -p "$STAGE_DIR" || die "$EXIT_BUILD" "无法创建注入目录: $STAGE_DIR"
   cp -f "$ENTRY_SOURCE" "$STAGE_FILE" || die "$EXIT_BUILD" "注入构建入口失败"
   log_info "已临时注入构建入口（构建结束后自动清理）"
