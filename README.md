@@ -1,7 +1,9 @@
-# 拾锋录 · 单机 3D 江湖刷本成长游戏
+# EdgeChronicles · 《拾锋录》单机 3D 江湖刷本成长游戏
 
 单机 3D 第三人称动作 RPG。1 角色 8 技能 · 3 副本 3 机制 Boss · 6 条修为线 · 12 套养成系统。
-Unity 6 URP · 本地存档 · 无服务器 · **无工期与成本约束**（团队为 AI 员工）。
+**Unity 2022.3.62f3c1（Unity 中国版 LTS）· URP 14** · 本地存档 · 无服务器 · **无工期与成本约束**（团队为 AI 员工）。
+
+> 仓库名 `EdgeChronicles`，游戏内名《拾锋录》。代码命名空间统一为 `EdgeChronicles.*`。
 
 ---
 
@@ -10,7 +12,7 @@ Unity 6 URP · 本地存档 · 无服务器 · **无工期与成本约束**（�
 | 文档 | 作用 | 什么时候看 |
 |---|---|---|
 | [`docs/impl/IMPL-v3.0.md`](docs/impl/IMPL-v3.0.md) | **实现方案（主文档）**：战斗十键与八层联动、12 套养成矩阵、技传派生表、打击感规格、数据契约、资产账目、并行切分 | 要实现，看这里 |
-| [`docs/impl/IMPL-v3.0-EL-03-progression.md`](docs/impl/IMPL-v3.0-EL-03-progression.md) | 养成层展开件：13 张表逐字段规格、16 项机制枚举、A31–A42、快照求值器、存档与默认值、CI 判据矩阵 | 要写养成层的代码，看这里 |
+| [`docs/impl/IMPL-v3.0-EL-03-progression.md`](docs/impl/IMPL-v3.0-EL-03-progression.md) | 养成层展开件：20 张表逐字段规格、28 项机制枚举、A19–A43、快照求值器、存档与默认值、CI 判据矩阵 | 要写养成层的代码，看这里 |
 | [`docs/impl/IMPL-v3.0-AD-03-art.md`](docs/impl/IMPL-v3.0-AD-03-art.md) | 美术展开件：UI 图集格位、五面板布局、星盘与络脉图形语言、派生 VFX 规格、AI 生成提示词模板 | 要做资产，看这里 |
 | [`docs/impl/TOOLCHAIN.md`](docs/impl/TOOLCHAIN.md) | **开工清单**：本机工具、AI 员工运行条件、仓库约定、版本锁定、首次初始化 | 开工前照着勾 |
 | [`docs/impl/IMPL-v2.0.md`](docs/impl/IMPL-v2.0.md) | 上一版（战斗内容已被 v3.0 取代），**架构部分仍有效** | 查架构细节时 |
