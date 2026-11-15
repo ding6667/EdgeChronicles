@@ -322,6 +322,54 @@ def check_initializers(root, problems):
 
 
 
+
+def strip_literals_and_comments(src):
+    """剥掉字符串字面量与注释，只留代码。
+
+    【为什么要连注释一起剥】判据目录的注释里大量出现 `A35` / `A33-1` 这类编号
+    （例如「A35 · mechanic_mod 枚举的双向一致性」）。只剥字符串会把注释里的编号
+    误判成跨类裸引用 —— 那是假阳性，会让这个门失去可信度。
+    """
+    out = []
+    i = 0
+    n = len(src)
+    while i < n:
+        c = src[i]
+        if c == "/" and i + 1 < n and src[i + 1] == "/":
+            j = src.find("\n", i)
+            if j < 0:
+                j = n
+            out.append(" " * (j - i))
+            i = j
+            continue
+        if c == "/" and i + 1 < n and src[i + 1] == "*":
+            j = src.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append(re.sub(r"[^\n]", " ", src[i:j]))
+            i = j
+            continue
+        if c == "@" and i + 1 < n and src[i + 1] == '"':
+            out.append(src[i:i + 2]); i += 2
+            while i < n:
+                if src[i] == '"':
+                    if i + 1 < n and src[i + 1] == '"':
+                        out.append('""'); i += 2; continue
+                    out.append('"'); i += 1; break
+                out.append(" " if src[i] != "\n" else "\n"); i += 1
+            continue
+        if c == '"':
+            out.append('"'); i += 1
+            while i < n:
+                if src[i] == "\\":
+                    out.append("  "); i += 2; continue
+                if src[i] == '"':
+                    out.append('"'); i += 1; break
+                out.append(" " if src[i] != "\n" else "\n"); i += 1
+            continue
+        out.append(c); i += 1
+    return "".join(out)
+
+
 def check_qualified_constants(root, problems):
     """L8：跨类引用的常量必须带类名限定。
 
@@ -354,12 +402,12 @@ def check_qualified_constants(root, problems):
     for path in iter_cs_files(root):
         with open(path, encoding="utf-8") as f:
             src = f.read()
-        code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', src)   # 去掉字符串字面量
+        code = strip_literals_and_comments(src)   # 去掉字符串字面量与注释
         for i, ln in enumerate(code.split("\n"), 1):
             if "public const string" in ln:
                 continue
             # ① 跨类裸引用
-            for m in re.finditer(r"(?<![.\w])([A-Z]\w*[A-Z]\w*)\b", ln):
+            for m in re.finditer(r"(?<![.\w])([A-Z][A-Za-z0-9_]*)\b", ln):
                 n = m.group(1)
                 if n not in names:
                     continue
@@ -386,6 +434,7 @@ def main():
     check_initializers(root, problems)
     for p in files:
         check_element_commas(p, problems)
+    check_qualified_constants(root, problems)
 
     mirror = os.path.join(root, "docs", "qa", "qa_oracle_mirror.py")
     if os.path.exists(mirror):
