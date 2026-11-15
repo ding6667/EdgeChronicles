@@ -43,6 +43,17 @@
 
 > 上述脚本属于工程线（`Tools/ci/**`），发布侧只调用、不修改。
 
+### 1.2b 档位参数落地核对
+
+> 字段映射表见 [`BUILD-PROFILE.md`](./BUILD-PROFILE.md)。这一组检查防的是「档位参数名存实亡」。
+
+| # | 检查项 | 判据 |
+|---|---|---|
+| 11b | 档位参数已落到 Unity | 出包日志有 `[BUILD] info 脚本后端` 与 `[BUILD] info 质量档` 两行 |
+| 11c | 没有静默漏项 | 出包日志里每条 `[BUILD] warn 跳过不兼容参数` 都能在 BUILD-PROFILE §6 找到对应说明；出现**未登记**的跳过项即判红 |
+| 11d | 运行期引导项已实现 | `BUILD-PROFILE.md` §5 的 8 条运行期引导清单，帧率上限与相机后期两项在当前档位机上可验证 |
+| 11e | 基线与包一致 | `build-manifest.json` 的 `build.tier` = 出包档位，`build.baselineSha256` = 当前基线文件的 sha256 |
+
 ### 1.3 构建
 
 | # | 检查项 | 判据 | 命令 |
@@ -67,6 +78,16 @@
 
 > 性能采样的场景与时长见 [`BASELINES.md`](./BASELINES.md) 的「验收方法」。
 > 帧率上限需要运行期引导脚本生效，该脚本归工程线；构建期已关闭 vSync。
+
+### 1.6 CI 侧
+
+| # | 检查项 | 判据 | 命令 |
+|---|---|---|---|
+| 22 | CI 预检 | 退出码 0 | `bash Tools/build/ci-unity-preflight.sh` |
+| 23 | 仓库变量与 secret 已设 | `UNITY_PATH` 变量存在、`UNITY_LICENSE` secret 存在 | 仓库 → Settings → Secrets and variables → Actions |
+
+> 搭建步骤见 [`CI-SETUP.md`](./CI-SETUP.md)。
+> **不配 CI 也能守门**：上面 1.1–1.5 的命令在本机逐条跑一遍即可，CI 只是把它们搬到另一台机器上。
 
 ---
 

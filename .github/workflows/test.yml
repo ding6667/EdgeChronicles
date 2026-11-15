@@ -33,6 +33,12 @@ jobs:
   unit-and-integration:
     name: EditMode + PlayMode + 数据自证
     runs-on: ${{ fromJSON(vars.UNITY_RUNNER_LABELS || '["self-hosted","windows"]') }}
+    env:
+      UNITY_PATH: ${{ vars.UNITY_PATH }}
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+      UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
     timeout-minutes: 60
     defaults:
       run:
@@ -45,29 +51,13 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      - name: 准备工具
+      - name: 准备 Unity（解析路径 / 校验版本 / 激活许可证）
         run: |
-          set -euo pipefail
-          if [ -z "${UNITY_PATH:-}" ] || [ ! -f "$UNITY_PATH" ]; then
-            echo "::error::仓库变量 UNITY_PATH 未设置或指向的文件不存在"
-            exit 3
-          fi
-          want="$(sed -n 's/^m_EditorVersion:[[:space:]]*//p' ProjectSettings/ProjectVersion.txt | head -1)"
-          echo "工程要求 Unity: $want"
-
-      - name: 激活 Unity 许可证
-        run: |
-          set -euo pipefail
-          if [ -n "${UNITY_LICENSE:-}" ]; then
-            mkdir -p "/c/ProgramData/Unity"
-            printf '%s' "$UNITY_LICENSE" > "/c/ProgramData/Unity/Unity_lic.ulf"
-          elif [ -n "${UNITY_EMAIL:-}" ] && [ -n "${UNITY_PASSWORD:-}" ]; then
-            "$UNITY_PATH" -batchmode -nographics -quit \
-              -serial "${UNITY_SERIAL:-}" -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" || true
-          else
-            echo "::error::没有可用的 Unity 许可证来源"
-            exit 3
-          fi
+          set -uo pipefail
+          bash Tools/build/ci-unity-preflight.sh
+          rc=$?
+          echo "Unity 预检退出码: $rc"
+          exit $rc
 
       - name: 编译自证
         run: |

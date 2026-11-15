@@ -43,39 +43,21 @@ die() {
 }
 
 # ── JSON 读取 ───────────────────────────────────────────────────────
-# JSONQ_TOOL 由调用方设置为 Tools/build/tools/jsonq.py 的绝对路径。
-# PY_BIN 探测到的 Python 解释器（jq 不可用时的退路）。
-PY_BIN=""
-if command -v python3 >/dev/null 2>&1; then PY_BIN="python3"
-elif command -v python >/dev/null 2>&1; then PY_BIN="python"; fi
+# JSONQ_SH 是 JSON 工具调度器（jq → python3 → python → powershell 依次退让）。
+# 自托管 Windows runner 上只有 Git Bash 与 PowerShell 5.1，所以最后一条退路是必需的。
+JSONQ_SH="${JSONQ_SH:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../tools" && pwd)/jsonq.sh}"
+JSONQ_TOOL="${JSONQ_TOOL:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../tools" && pwd)/jsonq.py}"
 
-# json_get <文件> <点号路径>：优先 jq，退化到 python3，再退化到 python。
-# 三者都不可用时返回 EXIT_DEPENDENCY。
+# json_get <文件> <点号路径>
 json_get() {
   local file="$1" path="$2"
-  if command -v jq >/dev/null 2>&1; then
-    jq -r "$path" "$file"
-    return $?
-  fi
-  if [ -z "$PY_BIN" ]; then
-    log_error "缺少 JSON 解析器：需要 jq 或 python3 之一"
-    return "$EXIT_DEPENDENCY"
-  fi
-  "$PY_BIN" "$JSONQ_TOOL" "$file" "$path"
+  "$JSONQ_SH" "$file" "$path"
 }
 
 # json_validate <文件>：合法返回 0，非法返回非零并打印原因。
 json_validate() {
   local file="$1"
-  if command -v jq >/dev/null 2>&1; then
-    jq -e . "$file" >/dev/null 2>&1 || { log_error "JSON 非法: $file"; return "$EXIT_BASELINE"; }
-    return 0
-  fi
-  if [ -z "$PY_BIN" ]; then
-    log_error "缺少 JSON 解析器：需要 jq 或 python3 之一"
-    return "$EXIT_DEPENDENCY"
-  fi
-  "$PY_BIN" "$JSONQ_TOOL" --validate "$file" || { log_error "JSON 非法: $file"; return "$EXIT_BASELINE"; }
+  "$JSONQ_SH" --validate "$file" || { log_error "JSON 非法: $file"; return "$EXIT_BASELINE"; }
   return 0
 }
 

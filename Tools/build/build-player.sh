@@ -221,11 +221,7 @@ log_info "基线校验和: $BASELINE_SHA"
 # 这样 JSON 结构只在 Tools/build/baselines/*.json 里定义一次，Unity 侧不重复实现解析器。
 flatten_baseline() {
   local file="$1"
-  if command -v jq >/dev/null 2>&1; then
-    jq -r 'paths(scalars) as $p | "\($p|map(tostring)|join("."))=\(getpath($p))"' "$file"
-  else
-    "$PY_BIN" "$JSONQ_TOOL" --flatten "$file"
-  fi
+  "$JSONQ_SH" --flatten "$file"
 }
 
 # ── 3. 预检：Unity 与工程占用 ─────────────────────────────────────

@@ -17,6 +17,7 @@ Tools/build/
 ├── build-player.sh          一键出包（主入口）
 ├── verify-artifact.sh       产物校验（用 manifest 的校验和判定「是不是这一版」）
 ├── lint-assets.sh           资产 Gate（命名 / 贴图 / 材质槽 / LFS 边界 / 版本 / 密钥）
+├── ci-unity-preflight.sh    CI 预检：解析 Unity / 校验版本 / 激活许可证（三条工作流共用）
 ├── baselines/
 │   ├── low.json             低档 · 集显轻薄本（验收底线）
 │   ├── medium.json          中档 · 默认发行档
@@ -25,9 +26,12 @@ Tools/build/
 │   ├── common.sh            日志、退出码、JSON 读取、校验和
 │   ├── unity-resolve.sh     Unity 解析、版本一致性、工程占用检测
 │   └── manifest.sh          build-manifest.json 生成与校验
-├── tools/jsonq.py           JSON 取值 / 校验 / 摊平（jq 不可用时的退路）
+├── tools/
+│   ├── jsonq.sh             JSON 工具调度器（jq → python3 → python → powershell）
+│   ├── jsonq.py             JSON 取值 / 校验 / 摊平（Python 实现）
+│   └── jsonq.ps1            JSON 取值 / 校验 / 摊平（PowerShell 实现，纯 ASCII）
 └── unity/
-    └── EdgeChronicles.ReleaseOps.Editor.cs   构建入口 + 资产 Gate（构建期临时注入）
+    └── EdgeChronicles.ReleaseOps.Editor.cs   构建入口兜底副本（见 §4）
 ```
 
 ---
@@ -99,28 +103,35 @@ Build/low-il2cpp-win64/
 
 ---
 
-## 4. 构建入口的注入机制（请先读这一节）
+## 4. 构建入口的归属与注入机制（请先读这一节）
 
-`Assets/**` 归工程线与美术线所有，发布侧**不长期占用**这个目录。
-但出包需要一个 Editor 入口来设置档位参数并调用 `BuildPipeline`。
+**归属划分（2026-11 起）**：
 
-因此采取**注入式**方案：
+| 层 | 归谁 | 放哪 |
+|---|---|---|
+| **C# 入口层** | 工程线（engineering-lead） | `Assets/_Project/Editor/ReleaseOps/` |
+| **脚本层**（注入 / 清理、manifest 生成、产物校验、基线读取） | 发布侧（release-ops-lead） | `Tools/build/**` |
 
-1. `Tools/build/unity/EdgeChronicles.ReleaseOps.Editor.cs` 是入口的**唯一真值源**，放在发布侧目录。
+`Assets/**` 归工程线与美术线所有，发布侧不长期占用这个目录。
+出包需要一个 Editor 入口来设置档位参数并调用 `BuildPipeline`，因此采取**注入式**方案：
+
+1. `Tools/build/unity/EdgeChronicles.ReleaseOps.Editor.cs` 是入口的**兜底副本**，放在发布侧目录。
 2. 出包 / Gate 前，脚本检查工程里是否已存在 `namespace EdgeChronicles.ReleaseOps`：
-   - **已存在** → 直接用工程里的实现，不注入（工程侧接管后本目录的副本自动让位）；
+   - **已存在** → 直接用工程里的实现，不注入（工程侧接管后本目录的副本自动让位，**不会有两个真值源**）；
    - **不存在** → 临时复制到 `Assets/_Project/Editor/ReleaseOps/`，执行完立刻删除（含 `.meta`）。
 3. 无论成功失败，清理逻辑都在 `trap` 里执行；工作树不会留下残留。
 
-工程侧若要长期接管这个入口，约定如下（发布侧按此调用，不关心实现细节）：
+**工程侧长期持有入口时的接口约定**（发布侧按此调用，不关心实现）：
 
 | 项 | 约定 |
 |---|---|
-| 命名空间 | `EdgeChronicles.ReleaseOps` |
-| 类与方法 | `PlayerBuild.Build()`（出包）、`AssetGate.Lint()`（资产 Gate） |
-| 参数 | 见文件头的「命令行约定」段（`-buildTier` / `-buildOutput` / `-buildBackend` / `-buildTarget` / `-buildVersion` / `-buildParams` / `-buildScenes` / `-buildStrict`） |
-| 日志 | `[BUILD] ok` / `[BUILD] fail` / `[BUILD] warn` / `[LINT] PASS|FAIL|WARN|SUMMARY` |
+| 命名空间 / 类 | `EdgeChronicles.ReleaseOps.PlayerBuild`（方法 `Build()`）、`EdgeChronicles.ReleaseOps.AssetGate`（方法 `Lint()`） |
+| 参数 | 见文件头的「命令行约定」段（`-buildTier` / `-buildOutput` / `-buildBackend` / `-buildTarget` / `-buildVersion` / `-buildParams` / `-buildScenes` / `-buildStrict`；Gate 用 `-lintBaseline` / `-lintVersion` / `-lintMaxTextureSize`） |
+| 日志 | `[BUILD] ok` / `[BUILD] fail` / `[BUILD] warn` / `[BUILD] info`、`[LINT] PASS|FAIL|WARN|SUMMARY` |
 | 回执 | 出包成功后在输出目录写 `unity-build-result.json` |
+
+> 两份实现不一致时，**以工程侧 `Assets/` 里的为准**（脚本检测到就跳过注入）。
+> 兜底副本存在的意义只是：工程侧还没落地时，出包链路也能跑通。
 
 ---
 
@@ -174,11 +185,12 @@ bash Tools/build/build-player.sh --tier low
 | Git Bash / bash | 是 | 脚本是 bash 版 |
 | Unity 2022.3.62f3c1（中国版 LTS） | 是 | 版本必须与 `ProjectSettings/ProjectVersion.txt` 一致，否则脚本拒绝构建 |
 | `sha256sum` 或 `shasum` | 是 | 计算校验和 |
-| `jq` 或 `python3` | 是 | 读机型基线 JSON（优先 jq，退化到 python3） |
+| JSON 读取器（**四选一即可**） | 是 | `jq` → `python3` → `python` → `powershell`（Windows 自带 5.1，`ConvertFrom-Json`）。调度器在 `tools/jsonq.sh`，自托管 Windows runner 上只有 Git Bash 也能工作 |
 | `find` / `sed` / `awk` / `sort` | 是 | 常规工具链 |
 
-CI 侧还需要仓库 secret：`UNITY_LICENSE`（或 `UNITY_EMAIL` + `UNITY_PASSWORD` + `UNITY_SERIAL`）。
+CI 侧还需要仓库变量 `UNITY_PATH` 与 secret `UNITY_LICENSE`（或 `UNITY_EMAIL` + `UNITY_PASSWORD` + `UNITY_SERIAL`）。
 **任何真实密钥都不入库**；资产 Gate `G8` 会扫描仓库里的密钥文件并判红。
+搭建步骤见 [`docs/release/CI-SETUP.md`](../../docs/release/CI-SETUP.md)。
 
 ---
 
@@ -186,9 +198,27 @@ CI 侧还需要仓库 secret：`UNITY_LICENSE`（或 `UNITY_EMAIL` + `UNITY_PASS
 
 | 工作流 | 作用 | 判据 |
 |---|---|---|
-| `.github/workflows/build.yml` | 编译 + 出包 | 出包退出码 0；玩家包存在；manifest 存在且校验和可复算；包体不超档位上限；出包后工作树干净 |
+| `.github/workflows/build.yml` | 编译 + 出包 | Unity 预检通过；出包退出码 0；玩家包存在；manifest 存在且校验和可复算；包体不超档位上限；出包后工作树干净 |
 | `.github/workflows/test.yml` | 调 `Tools/ci/check-*.sh` | 每个脚本的退出码与日志关键行 |
 | `.github/workflows/lint.yml` | 资产 Gate | `lint-assets.sh` 退出码 0 且无 `[LINT] FAIL`；另有不依赖 Unity 的仓库卫生检查 |
+
+三条工作流的第一步都调 `Tools/build/ci-unity-preflight.sh`（解析 Unity 路径 / 校验版本 / 激活许可证），
+任一步失败都以非零码退出。
+
+分支/PR 出的是**开发包**（非严格门控）；打 tag 出的是**正式包**（严格门控）。
+严格门控的额外判定：渲染管线必须是 URP、构建场景必须已登记、工作树必须干净。
+
+---
+
+## 8. 相关文档
+
+| 文档 | 内容 |
+|---|---|
+| [`docs/release/BASELINES.md`](../../docs/release/BASELINES.md) | 三档机型基线的含义、差异与验收方法 |
+| [`docs/release/BUILD-PROFILE.md`](../../docs/release/BUILD-PROFILE.md) | 档位参数 → Unity 工程设置的字段映射表 + 运行期引导清单 |
+| [`docs/release/RELEASE-CHECKLIST.md`](../../docs/release/RELEASE-CHECKLIST.md) | 出包前检查清单、归档与回滚、补丁说明模板、存档兼容性 |
+| [`docs/release/VERSIONING.md`](../../docs/release/VERSIONING.md) | 版本号规则、提交规范、分支策略 |
+| [`docs/release/CI-SETUP.md`](../../docs/release/CI-SETUP.md) | 自托管 runner 与仓库变量/secret 的照做清单 |
 
 分支/PR 出的是**开发包**（非严格门控）；打 tag 出的是**正式包**（严格门控）。
 严格门控的额外判定：渲染管线必须是 URP、构建场景必须已登记、工作树必须干净。
