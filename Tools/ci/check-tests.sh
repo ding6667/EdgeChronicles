@@ -3,6 +3,7 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 . "$ROOT/Tools/ci/unity.sh"
+reject_if_locked "$ROOT" || exit 3
 UNITY="$(resolve_unity)" || exit 2
 LOG="$ROOT/Tools/ci/check-tests.log"
 XML="$ROOT/Tools/ci/results.xml"
