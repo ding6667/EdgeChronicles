@@ -1,0 +1,142 @@
+﻿id,atlas,cell,category,system,subject,tags,primary,accent,gen_size,master_size,display_size,template,output
+UI_ICON_SKL_Core,A,A01,技能图标,SKL,拾锋式：聚拢成三叉的锋簇落在阵位,"锋簇,凝聚,落阵",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Core.png
+UI_ICON_SKL_Light,A,A02,技能图标,SKL,迅锋：三段递进的竖直刀光,"刀光,轻击,斩",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Light.png
+UI_ICON_SKL_Heavy,A,A03,技能图标,SKL,裂石：一记下劈的重刀光,"刀光,重击,蓄力",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Heavy.png
+UI_ICON_SKL_Dash,A,A04,技能图标,SKL,回锋：穿身而过的横刀光,"刀光,突进,位移",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Dash.png
+UI_ICON_SKL_Control,A,A05,技能图标,SKL,缚锋：方框铰点锁链缠住目标,"锁定,定身,铰点",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Control.png
+UI_ICON_SKL_Guard,A,A06,技能图标,SKL,抱元：纸白双边中空的护壳,"护盾,霸体,中空",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Guard.png
+UI_ICON_SKL_Channel,A,A07,技能图标,SKL,聚锋：向心汇聚的光粒,"引导,凝聚",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Channel.png
+UI_ICON_SKL_Finisher,A,A08,技能图标,SKL,破锋：自爆点向上抽出的光柱,"引爆,爆发,上抽",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SKL_Finisher.png
+UI_ICON_DERIV_DoubleJump,A,A09,派生效果,DERIV,末跳翻倍：双环反向旋进,"凝聚,外扩",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_DERIV_DoubleJump.png
+UI_ICON_DERIV_BreakStance,A,A10,派生效果,DERIV,破势：纸白双边中空的回锋刀光,"刀光,中空",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_DERIV_BreakStance.png
+UI_ICON_DERIV_ReExpand,A,A11,派生效果,DERIV,引爆再展域：自爆点向上抽出的光柱,"引爆,上抽",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_DERIV_ReExpand.png
+UI_ICON_DERIV_Echo,A,A12,派生效果,DERIV,回响：两道错位半拍的窄刀光,"刀光,错位",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_DERIV_Echo.png
+UI_ICON_DERIV_ShieldBreak,A,A13,派生效果,DERIV,破罩冲击：竖直朝向相机的反震环,"护盾,爆发",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_DERIV_ShieldBreak.png
+UI_ICON_DERIV_GatherCluster,A,A14,派生效果,DERIV,聚锋簇：终点悬停的三叉锋簇,"锋簇,悬停",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_DERIV_GatherCluster.png
+UI_PANEL_STATE_Base,A,A15,战斗状态,STATE,状态底板：外框加内槽,"底框,内槽",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_STATE_Base.png
+UI_ICON_STATE_Buff,A,A16,战斗状态,STATE,增益：槽内一枚向上的三角,"增益,三角",#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Buff.png
+UI_ICON_STATE_Debuff,A,A17,战斗状态,STATE,减益：槽内一枚向下的三角,"减益,三角",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Debuff.png
+UI_ICON_STATE_Abnormal,A,A18,战斗状态,STATE,异常：槽内一枚断裂的方框,"异常,方框,断口",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Abnormal.png
+UI_ICON_STATE_SuperArmor,A,A19,战斗状态,STATE,霸体：槽内一枚单边实描方框,"霸体,方框",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_SuperArmor.png
+UI_ICON_STATE_Invincible,A,A20,战斗状态,STATE,无敌：槽内一枚双边中空方框,"无敌,方框,中空",#1E1B18,#E8DFC9,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Invincible.png
+UI_ICON_STATE_Stack,A,A21,战斗状态,STATE,层数：槽内三层叠条,层数,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Stack.png
+UI_ICON_STATE_Lock,A,A22,战斗状态,STATE,锁定：槽内方框加铰点,"锁定,方框,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Lock.png
+UI_ICON_HUD_Bag,A,A23,通用HUD,HUD,背包：束口布袋,护具,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Bag.png
+UI_ICON_HUD_Settings,A,A24,通用HUD,HUD,设置：交叉扳手,方框,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Settings.png
+UI_ICON_HUD_Map,A,A25,通用HUD,HUD,地图：折叠纸页,纸片,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Map.png
+UI_ICON_HUD_Party,A,A26,通用HUD,HUD,队伍：三人并列立影,纸片,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Party.png
+UI_ICON_HUD_Quest,A,A27,通用HUD,HUD,任务：系绳卷轴,纸片,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Quest.png
+UI_ICON_HUD_Result,A,A28,通用HUD,HUD,结算：分叉的秤杆,方框,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Result.png
+UI_ICON_HUD_Help,A,A29,通用HUD,HUD,帮助：问号形记号,方框,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Help.png
+UI_ICON_HUD_Exit,A,A30,通用HUD,HUD,退出：门框加横杠,方框,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_HUD_Exit.png
+UI_ICON_MARK_Elite,A,A31,敌人标记,MARK,精英：实绘占位方块,方框,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MARK_Elite.png
+UI_ICON_MARK_Boss,A,A32,敌人标记,MARK,首领：双层方框加冠,方框,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MARK_Boss.png
+UI_ICON_MARK_Interact,A,A33,敌人标记,MARK,可交互：方框加角标,"方框,角标",#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MARK_Interact.png
+UI_ICON_LINE_Bone_0,A,A34,修为线-未满,LINE,淬骨：体质属性的空心轮廓记号,体质,#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Bone_0.png
+UI_ICON_LINE_Bone_1,A,A40,修为线-满级,LINE,淬骨：体质属性的实心记号,体质,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Bone_1.png
+UI_ICON_LINE_Breath_0,A,A35,修为线-未满,LINE,气海：内功属性的空心轮廓记号,内功,#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Breath_0.png
+UI_ICON_LINE_Breath_1,A,A41,修为线-满级,LINE,气海：内功属性的实心记号,内功,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Breath_1.png
+UI_ICON_LINE_Agility_0,A,A36,修为线-未满,LINE,身法：敏捷属性的空心轮廓记号,敏捷,#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Agility_0.png
+UI_ICON_LINE_Agility_1,A,A42,修为线-满级,LINE,身法：敏捷属性的实心记号,敏捷,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Agility_1.png
+UI_ICON_LINE_Edge_0,A,A37,修为线-未满,LINE,锋锐：攻击属性的空心轮廓记号,攻击,#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Edge_0.png
+UI_ICON_LINE_Edge_1,A,A43,修为线-满级,LINE,锋锐：攻击属性的实心记号,攻击,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Edge_1.png
+UI_ICON_LINE_Heart_0,A,A38,修为线-未满,LINE,心印：悟性属性的空心轮廓记号,悟性,#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Heart_0.png
+UI_ICON_LINE_Heart_1,A,A44,修为线-满级,LINE,心印：悟性属性的实心记号,悟性,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Heart_1.png
+UI_ICON_LINE_Fame_0,A,A39,修为线-未满,LINE,名望：声望属性的空心轮廓记号,声望,#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Fame_0.png
+UI_ICON_LINE_Fame_1,A,A45,修为线-满级,LINE,名望：声望属性的实心记号,声望,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_LINE_Fame_1.png
+UI_PANEL_Base,A,A46,九宫格与底板,PANEL,面板底：半透宣纸平铺底,底板,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_Base.png
+UI_PANEL_Section,A,A47,九宫格与底板,PANEL,分区底：横贯的分区底,分区底,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_Section.png
+UI_PANEL_IconSlot,A,A48,九宫格与底板,PANEL,图标底板：方形小底,图标底板,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_IconSlot.png
+UI_PANEL_Slot,A,A49,九宫格与底板,PANEL,槽位底：凹槽小底,槽位底,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_Slot.png
+UI_PANEL_TabBar,A,A50,九宫格与底板,PANEL,页签条：横向长条,页签条,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_TabBar.png
+UI_PANEL_Divider,A,A51,九宫格与底板,PANEL,分隔线：短横线,分隔线,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_Divider.png
+UI_ICON_TECH_Tier1,A,A53,技传阶位徽记,TECH,技传第 1 阶徽记：同底板加 1 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier1.png
+UI_ICON_TECH_Tier2,A,A54,技传阶位徽记,TECH,技传第 2 阶徽记：同底板加 2 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier2.png
+UI_ICON_TECH_Tier3,A,A55,技传阶位徽记,TECH,技传第 3 阶徽记：同底板加 3 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier3.png
+UI_ICON_TECH_Tier4,A,A56,技传阶位徽记,TECH,技传第 4 阶徽记：同底板加 4 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier4.png
+UI_ICON_TECH_Tier5,A,A57,技传阶位徽记,TECH,技传第 5 阶徽记：同底板加 5 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier5.png
+UI_ICON_CUR_Power,A,A57,货币,CURRENCY,战力：交叉双刃,刀身,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Power.png
+UI_ICON_CUR_Edge,A,A58,货币,CURRENCY,锋芒：三角刃尖,刀身,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Edge.png
+UI_ICON_CUR_Fame,A,A59,货币,CURRENCY,名望：圆环加横杠,圆环,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Fame.png
+UI_ICON_CUR_Reset,A,A60,货币,CURRENCY,重置：回环箭头,圆环,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Reset.png
+UI_ICON_AFFIX_01,B,B01,词条,AFFIX,词条族内共用外框加第 1 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_01.png
+UI_ICON_AFFIX_02,B,B02,词条,AFFIX,词条族内共用外框加第 2 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_02.png
+UI_ICON_AFFIX_03,B,B03,词条,AFFIX,词条族内共用外框加第 3 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_03.png
+UI_ICON_AFFIX_04,B,B04,词条,AFFIX,词条族内共用外框加第 4 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_04.png
+UI_ICON_AFFIX_05,B,B05,词条,AFFIX,词条族内共用外框加第 5 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_05.png
+UI_ICON_AFFIX_06,B,B06,词条,AFFIX,词条族内共用外框加第 6 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_06.png
+UI_ICON_AFFIX_07,B,B07,词条,AFFIX,词条族内共用外框加第 7 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_07.png
+UI_ICON_AFFIX_08,B,B08,词条,AFFIX,词条族内共用外框加第 8 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_08.png
+UI_ICON_AFFIX_09,B,B09,词条,AFFIX,词条族内共用外框加第 9 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_09.png
+UI_ICON_AFFIX_10,B,B10,词条,AFFIX,词条族内共用外框加第 10 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_10.png
+UI_ICON_AFFIX_11,B,B11,词条,AFFIX,词条族内共用外框加第 11 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_11.png
+UI_ICON_AFFIX_12,B,B12,词条,AFFIX,词条族内共用外框加第 12 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_12.png
+UI_ICON_AFFIX_13,B,B13,词条,AFFIX,词条族内共用外框加第 13 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_13.png
+UI_ICON_AFFIX_14,B,B14,词条,AFFIX,词条族内共用外框加第 14 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_14.png
+UI_ICON_AFFIX_15,B,B15,词条,AFFIX,词条族内共用外框加第 15 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_15.png
+UI_ICON_AFFIX_16,B,B16,词条,AFFIX,词条族内共用外框加第 16 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_16.png
+UI_ICON_AFFIX_17,B,B17,词条,AFFIX,词条族内共用外框加第 17 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_17.png
+UI_ICON_AFFIX_18,B,B18,词条,AFFIX,词条族内共用外框加第 18 个内嵌字形,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_AFFIX_18.png
+UI_ICON_STAR_Blade_1,B,B19,星盘节点,STAR,"锋系第 1 节点：圆环,同心环加中心刻纹","圆环,同心环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Blade_1.png
+UI_ICON_STAR_Blade_2,B,B20,星盘节点,STAR,"锋系第 2 节点：圆环,同心环加中心刻纹","圆环,同心环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Blade_2.png
+UI_ICON_STAR_Blade_3,B,B21,星盘节点,STAR,"锋系第 3 节点：圆环,同心环加中心刻纹","圆环,同心环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Blade_3.png
+UI_ICON_STAR_Blood_1,B,B22,星盘节点,STAR,血系第 1 节点：六边方加中心刻纹,六边方,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Blood_1.png
+UI_ICON_STAR_Blood_2,B,B23,星盘节点,STAR,血系第 2 节点：六边方加中心刻纹,六边方,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Blood_2.png
+UI_ICON_STAR_Blood_3,B,B24,星盘节点,STAR,血系第 3 节点：六边方加中心刻纹,六边方,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Blood_3.png
+UI_ICON_STAR_Speed_1,B,B25,星盘节点,STAR,速系第 1 节点：三角加中心刻纹,三角,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Speed_1.png
+UI_ICON_STAR_Speed_2,B,B26,星盘节点,STAR,速系第 2 节点：三角加中心刻纹,三角,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Speed_2.png
+UI_ICON_STAR_Speed_3,B,B27,星盘节点,STAR,速系第 3 节点：三角加中心刻纹,三角,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Speed_3.png
+UI_ICON_STAR_Momentum_1,B,B28,星盘节点,STAR,势系第 1 节点：菱形加中心刻纹,菱形,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Momentum_1.png
+UI_ICON_STAR_Momentum_2,B,B29,星盘节点,STAR,势系第 2 节点：菱形加中心刻纹,菱形,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Momentum_2.png
+UI_ICON_STAR_Momentum_3,B,B30,星盘节点,STAR,势系第 3 节点：菱形加中心刻纹,菱形,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STAR_Momentum_3.png
+UI_ICON_SPEC_Passive1_0,B,B31,手札特技-未启用,SPEC,手札第 1 被动未启用态：空心记号,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SPEC_Passive1_0.png
+UI_ICON_SPEC_Passive1_1,B,B32,手札特技-已启用,SPEC,手札第 1 被动已启用态：实心记号,"外框,方框",#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SPEC_Passive1_1.png
+UI_ICON_SPEC_Passive2_0,B,B33,手札特技-未启用,SPEC,手札第 2 被动未启用态：空心记号,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SPEC_Passive2_0.png
+UI_ICON_SPEC_Passive2_1,B,B34,手札特技-已启用,SPEC,手札第 2 被动已启用态：实心记号,"外框,方框",#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SPEC_Passive2_1.png
+UI_ICON_SPEC_Passive3_0,B,B35,手札特技-未启用,SPEC,手札第 3 被动未启用态：空心记号,"外框,方框",#1E1B18,#8C5A3B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SPEC_Passive3_0.png
+UI_ICON_SPEC_Passive3_1,B,B36,手札特技-已启用,SPEC,手札第 3 被动已启用态：实心记号,"外框,方框",#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_SPEC_Passive3_1.png
+UI_ICON_VEIN_Hub,B,B37,络脉节点,VEIN,枢纽：双环记号,圆环,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Hub.png
+UI_ICON_VEIN_Branch1,B,B38,络脉节点,VEIN,分支一：环加单枝,"分支,圆环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Branch1.png
+UI_ICON_VEIN_Branch2,B,B39,络脉节点,VEIN,分支二：环加双枝,"分支,圆环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Branch2.png
+UI_ICON_VEIN_Branch3,B,B40,络脉节点,VEIN,分支三：环加三枝,"分支,圆环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Branch3.png
+UI_ICON_VEIN_Leaf1,B,B42,络脉节点,VEIN,络脉第 1 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf1.png
+UI_ICON_VEIN_Leaf2,B,B43,络脉节点,VEIN,络脉第 2 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf2.png
+UI_ICON_VEIN_Leaf3,B,B44,络脉节点,VEIN,络脉第 3 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf3.png
+UI_ICON_VEIN_Leaf4,B,B45,络脉节点,VEIN,络脉第 4 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf4.png
+UI_ICON_TRIM_Slot1_Kind1,B,B45,锋饰,TRIM,第 1 锋饰槽第 1 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot1_Kind1.png
+UI_ICON_TRIM_Slot1_Kind2,B,B46,锋饰,TRIM,第 1 锋饰槽第 2 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot1_Kind2.png
+UI_ICON_TRIM_Slot1_Kind3,B,B47,锋饰,TRIM,第 1 锋饰槽第 3 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot1_Kind3.png
+UI_ICON_TRIM_Slot2_Kind1,B,B48,锋饰,TRIM,第 2 锋饰槽第 1 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot2_Kind1.png
+UI_ICON_TRIM_Slot2_Kind2,B,B49,锋饰,TRIM,第 2 锋饰槽第 2 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot2_Kind2.png
+UI_ICON_TRIM_Slot2_Kind3,B,B50,锋饰,TRIM,第 2 锋饰槽第 3 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot2_Kind3.png
+UI_ICON_TRIM_Slot3_Kind1,B,B51,锋饰,TRIM,第 3 锋饰槽第 1 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot3_Kind1.png
+UI_ICON_TRIM_Slot3_Kind2,B,B52,锋饰,TRIM,第 3 锋饰槽第 2 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot3_Kind2.png
+UI_ICON_TRIM_Slot3_Kind3,B,B53,锋饰,TRIM,第 3 锋饰槽第 3 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot3_Kind3.png
+UI_ICON_STATE_Shield,B,B54,战斗状态补充,STATE,护盾：槽内一枚折角盾形,护盾,#1E1B18,#7C9A5B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Shield.png
+UI_ICON_STATE_Channel,B,B55,战斗状态补充,STATE,引导：槽内三点弧线,引导,#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_STATE_Channel.png
+UI_ICON_TAB_Cultivation,B,B56,养成页签,TAB,修为页签：方框记号,方框,#1E1B18,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TAB_Cultivation.png
+UI_ICON_TAB_Equipment,B,B57,养成页签,TAB,装备页签：方框记号,方框,#1E1B18,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TAB_Equipment.png
+UI_ICON_TAB_Star,B,B58,养成页签,TAB,星盘页签：同心环记号,同心环,#1E1B18,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TAB_Star.png
+UI_ICON_TAB_Tech,B,B59,养成页签,TAB,手札技传页签：徽记记号,徽记,#1E1B18,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TAB_Tech.png
+UI_ICON_TAB_Vein,B,B60,养成页签,TAB,络脉页签：圆环记号,圆环,#1E1B18,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TAB_Vein.png
+UI_ICON_PART_Blade,B,B61,装备部位,PART,锋刃：单刃侧影,刀身,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_PART_Blade.png
+UI_ICON_PART_Armor,B,B62,装备部位,PART,护衣：上衣侧影,护具,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_PART_Armor.png
+UI_ICON_PART_Boots,B,B63,装备部位,PART,行履：靴子侧影,履具,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_PART_Boots.png
+UI_ICON_MAT_IronSmelt,C,C01,材料内容造型,MAT,炉淬铁：未锻的矿石块,"碎块,矿物",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_IronSmelt.png
+UI_ICON_MAT_Dew,C,C02,材料内容造型,MAT,潮息露：悬滴的露珠,"液滴,液体",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_Dew.png
+UI_ICON_MAT_Feather,C,C03,材料内容造型,MAT,逐风翎：一支带羽的翎条,"羽条,植物羽",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_Feather.png
+UI_ICON_MAT_BladeChip,C,C04,材料内容造型,MAT,断刃屑：卷刃碎片,碎块,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_BladeChip.png
+UI_ICON_MAT_SandMemory,C,C05,材料内容造型,MAT,旧忆砂：漏下的砂堆,"堆锥,粉末",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_SandMemory.png
+UI_ICON_MAT_WashStone,C,C06,材料内容造型,MAT,洗练石：带缺口的圆石,"圆片,矿物",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_WashStone.png
+UI_ICON_MAT_MergeMaterial,C,C07,材料内容造型,MAT,合锋料：两段相接的料,刃器,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_MergeMaterial.png
+UI_ICON_MAT_StarDisc,C,C08,材料内容造型,MAT,星盘点：带刻槽的圆盘,圆片,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_StarDisc.png
+UI_ICON_MAT_VeinDot,C,C09,材料内容造型,MAT,脉络点：带结扣的小点,"圆点,结扣",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_VeinDot.png
+UI_ICON_MAT_SecretPage,C,C10,材料内容造型,MAT,秘札页：折角的残页,"纸片,凭证",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_SecretPage.png
+UI_ICON_MAT_BladeManual,C,C11,材料内容造型,MAT,锋谱：装订成册的谱册,"纸片,凭证",#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_MAT_BladeManual.png
+UI_FRAME_MAT_Crystal,C,C12,材料族框,MAT,矿物族框：碎块外框,矿物,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_FRAME_MAT_Crystal.png
+UI_FRAME_MAT_Liquid,C,C13,材料族框,MAT,液体族框：液滴外框,液体,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_FRAME_MAT_Liquid.png
+UI_FRAME_MAT_Plume,C,C14,材料族框,MAT,植物羽族框：羽条外框,植物羽,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_FRAME_MAT_Plume.png
+UI_FRAME_MAT_Slippage,C,C15,材料族框,MAT,凭证族框：纸片外框,凭证,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_FRAME_MAT_Slippage.png
+UI_FRAME_MAT_Powder,C,C16,材料族框,MAT,粉末族框：堆锥外框,粉末,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_FRAME_MAT_Powder.png
+UI_FRAME_MAT_Disc,C,C17,材料族框,MAT,消耗族框：圆片外框,消耗,#1E1B18,#8C5A3B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_FRAME_MAT_Disc.png
+UI_ICON_PICKUP,C,C18,可拾取标记,MAT,可拾取角标：角标方框加折角,"角标,方框",#1E1B18,#7C9A5B,1024,64,32,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_PICKUP.png
