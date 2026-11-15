@@ -68,7 +68,7 @@ namespace EdgeChronicles.Tests.Criteria
                 if (!HasDigit(p.SlowMotion)) { problems.Add(p.Id + " 的慢放倍数没有写死数值"); }
                 if (!HasDigit(p.JudgementAction) && !HasDigit(p.PassCriteria)) { problems.Add(p.Id + " 的判定动作 / 通过标准里没有任何具体数值"); }
             }
-            Assert.IsEmpty(problems, "以下协议存在"看情况"成分：\n" + string.Join("\n", problems.ToArray()));
+            Assert.IsEmpty(problems, "以下协议存在「看情况」成分：\n" + string.Join("\n", problems.ToArray()));
         }
 
         [Test]

@@ -231,9 +231,28 @@ namespace EdgeChronicles.Tests.Qa
             // ── 技传 40 阶（IMPL-v3.0 §4.5.4；阶位类型按 §4.5.3 通用模板，见 D-03）──
             BuildDerivatives(s);
 
-            // ── 多来源效果（A39）──
-            s.EffectSources.Add(new QaEffectSourceRow { SourceKind = "specialty", EffectKey = "resource_cap", EffectValue = 1f });
-            s.EffectSources.Add(new QaEffectSourceRow { SourceKind = "meridian", EffectKey = "resource_cap", EffectValue = 1f });
+            // ── 多来源效果合并（EL-03 §2 A39-1 / A39-2）──
+            //   上限类 → 取最大；其余数值类 → 取最小不叠加；离散类 → 只生效一次。
+            var cap = new QaEffectMergeRow { EffectKey = "resource_cap", MergeClass = EffectMergeClass.CapUpper };
+            cap.SourceValues.Add(1f); cap.SourceKinds.Add("specialty");
+            cap.SourceValues.Add(1f); cap.SourceKinds.Add("meridian");
+            cap.MergedValue = 1f; // max(1,1)
+            s.EffectMerges.Add(cap);
+
+            var num = new QaEffectMergeRow { EffectKey = "atk_flat", MergeClass = EffectMergeClass.Numeric };
+            num.SourceValues.Add(5f); num.SourceKinds.Add("affix_pool");
+            num.SourceValues.Add(8f); num.SourceKinds.Add("star_node");
+            num.MergedValue = 5f; // min(5,8)，不叠加
+            s.EffectMerges.Add(num);
+
+            var disc = new QaEffectMergeRow { EffectKey = "crit_flag", MergeClass = EffectMergeClass.Discrete };
+            disc.SourceValues.Add(1f); disc.SourceKinds.Add("meridian");
+            disc.MergedValue = 1f; // 离散类只生效一次
+            s.EffectMerges.Add(disc);
+
+            // ── 络脉节点（数值列恒空，只承载机制项）──
+            s.Meridians.Add(new QaMeridianRow { NodeId = "mn_hub_1", EffectKey = "eff_resource_cap", MechanicMod = "MM_MER_CONDUCE_STACK" });
+            s.Meridians.Add(new QaMeridianRow { NodeId = "mn_branch_1", EffectKey = "eff_atk_flat", MechanicMod = "MM_MER_CONDUCE_RANGE" });
 
             // ── 掉落保底（A40）──
             s.DropPity.Add(new QaDropPityRow { MaterialKey = "mat_vein_point", Counter = 0, Threshold = CombatSpec.DefaultDropPityThreshold });
@@ -888,10 +907,26 @@ namespace EdgeChronicles.Tests.Qa
                     CostEu = d.CostEu
                 });
             }
-            for (int i = 0; i < src.EffectSources.Count; i++)
+            for (int i = 0; i < src.EffectMerges.Count; i++)
             {
-                var e = src.EffectSources[i];
-                s.EffectSources.Add(new QaEffectSourceRow { SourceKind = e.SourceKind, EffectKey = e.EffectKey, EffectValue = e.EffectValue });
+                var e = src.EffectMerges[i];
+                s.EffectMerges.Add(new QaEffectMergeRow
+                {
+                    EffectKey = e.EffectKey,
+                    MergeClass = e.MergeClass,
+                    SourceValues = new List<float>(e.SourceValues),
+                    SourceKinds = new List<string>(e.SourceKinds),
+                    MergedValue = e.MergedValue
+                });
+            }
+            for (int i = 0; i < src.Meridians.Count; i++)
+            {
+                var m = src.Meridians[i];
+                s.Meridians.Add(new QaMeridianRow
+                {
+                    NodeId = m.NodeId, Series = m.Series, EffectKey = m.EffectKey,
+                    MechanicMod = m.MechanicMod, NumericValue = m.NumericValue, UnlockTier = m.UnlockTier
+                });
             }
             for (int i = 0; i < src.DropPity.Count; i++)
             {

@@ -115,6 +115,13 @@ namespace EdgeChronicles.Tests.Qa
         /// <summary>豁免负向用例的理由（仅观察项填写）。</summary>
         public string NegativeCaseWaiver = "";
         /// <summary>
+        /// 对位断言（EL-03 §2 的 A19–A43）。
+        /// 【为什么要有这一列】EL-03 §5 的 CI 判据矩阵已改为**引用式**：
+        /// 判据逻辑的唯一真值源是 EL-03 §2。凡与 A19–A43 重叠的部分，这里只**引用编号**，
+        /// 不重新定义判据——否则同一个数会有两个来源。没有对位断言的填空数组。
+        /// </summary>
+        public List<string> RelatedAssertionIds = new List<string>();
+        /// <summary>
         /// 该判据是否**确实不涉及任何时钟轴**（纯数据层判据，如描边结构、材质槽数量）。
         /// 为 false 时，时钟轴必须显式声明 —— 这是"量纲 + 时钟轴"铁律的例外通道，
         /// 用它来防止把"忘了写时钟轴"伪装成"不需要时钟轴"。
@@ -145,6 +152,8 @@ namespace EdgeChronicles.Tests.Qa
         public string SourceRef = "";
         /// <summary>执行通道：脚本 / 人眼协议。</summary>
         public CriterionExecutability Channel = CriterionExecutability.AutoScript;
+        /// <summary>对位断言（同 <see cref="CriterionRecord.RelatedAssertionIds"/>）。</summary>
+        public List<string> RelatedAssertionIds = new List<string>();
     }
 
     /// <summary>

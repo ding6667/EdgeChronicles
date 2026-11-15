@@ -188,13 +188,51 @@ namespace EdgeChronicles.Tests.Qa
         public int CostEu = 1;
     }
 
-    /// <summary>多来源效果来源（EL-03 §2 A39）。</summary>
-    public sealed class QaEffectSourceRow
+    /// <summary>效果键的合并类别（EL-03 §2 A39-1 / A39-2）。</summary>
+    public enum EffectMergeClass
     {
-        /// <summary>affix_pool / meridian / star_node / tech_skill / specialty。</summary>
-        public string SourceKind = "affix_pool";
+        /// <summary>上限类：多来源**取最大**（A39-1）。</summary>
+        CapUpper = 0,
+        /// <summary>其余数值类：多来源**取最小、不叠加**（A39-2）。</summary>
+        Numeric = 1,
+        /// <summary>离散类：只生效一次（A39-2）。</summary>
+        Discrete = 2
+    }
+
+    /// <summary>
+    /// 一个效果键的多来源合并结果（EL-03 §2 A39）。
+    /// 【为什么用"合并结果 + 来源值列表"而不是"来源列表"】
+    /// A39 判的是**合并规则**（上限类取最大 / 其余取最小不叠加 / 离散只生效一次），
+    /// 所以夹具必须同时提供"各来源给了什么"和"最终合并成了什么"，判据才能验证规则而不是验证实现。
+    /// </summary>
+    public sealed class QaEffectMergeRow
+    {
         public string EffectKey = "";
-        public float EffectValue = 0f;
+        public EffectMergeClass MergeClass = EffectMergeClass.Numeric;
+        /// <summary>各来源给出的原始值（按来源顺序）。</summary>
+        public List<float> SourceValues = new List<float>();
+        /// <summary>实际合并出来的值。</summary>
+        public float MergedValue = 0f;
+        /// <summary>各来源的种类（仅用于记录；规则本身只看 MergeClass）。</summary>
+        public List<string> SourceKinds = new List<string>();
+    }
+
+    /// <summary>
+    /// 络脉节点行（EL-03 §1 的 meridian 表）。
+    /// 【重要】络脉的**数值列恒空**——它只承载机制项。
+    /// 因此"机制字段写成自由字符串"的负向夹具用络脉节点比用星盘节点更容易触发：
+    /// 络脉没有数值列可以退化成合法数值，误写必然露出来。
+    /// </summary>
+    public sealed class QaMeridianRow
+    {
+        public string NodeId = "mn_hub_1";
+        public string Series = "meridian";
+        public string EffectKey = "";
+        /// <summary>机制项；空串 = 无机制。</summary>
+        public string MechanicMod = "";
+        /// <summary>数值列：络脉恒为空（null 表示"这一列不存在"）。</summary>
+        public string NumericValue = null;
+        public int UnlockTier = 1;
     }
 
     /// <summary>掉落保底状态（EL-03 §2 A40）。</summary>
@@ -243,7 +281,8 @@ namespace EdgeChronicles.Tests.Qa
         public List<QaVfxAssetRow> VfxAssets = new List<QaVfxAssetRow>();
         public List<QaKnockbackRow> Knockbacks = new List<QaKnockbackRow>();
         public List<QaDerivativeRow> Derivatives = new List<QaDerivativeRow>();
-        public List<QaEffectSourceRow> EffectSources = new List<QaEffectSourceRow>();
+        public List<QaEffectMergeRow> EffectMerges = new List<QaEffectMergeRow>();
+        public List<QaMeridianRow> Meridians = new List<QaMeridianRow>();
         public List<QaDropPityRow> DropPity = new List<QaDropPityRow>();
         public List<QaStarNodeRow> StarNodes = new List<QaStarNodeRow>();
         public QaGlobalTuningRow GlobalTuning = new QaGlobalTuningRow();

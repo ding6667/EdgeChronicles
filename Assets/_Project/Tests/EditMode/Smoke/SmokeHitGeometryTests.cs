@@ -56,7 +56,7 @@ namespace EdgeChronicles.Tests.Smoke
             List<ScenarioFactory.HitGeometryCase> cases = ScenarioFactory.SectorCases();
             for (int i = 0; i < cases.Count; i++)
             {
-                Assert.IsNotNull(cases[i].Origin, "扇形用例缺少原点，判定将退化为"永远命中"。");
+                Assert.IsNotNull(cases[i].Origin, "扇形用例缺少原点，判定将退化为「永远命中」。");
                 Assert.AreNotEqual(0f, cases[i].Radius, "扇形用例半径为 0，用例本身无效。");
             }
         }

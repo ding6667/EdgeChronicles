@@ -41,6 +41,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-01（曲线前 2 帧积分 / 总积分）；人眼：HP-01（末帧-待机首帧姿势差，固定机位与慢放）",
                 FalsePositiveCondition = "判据只量前 2 帧的位移占比。若实现把蹬地窗口定义为「前 2 帧内速度最大的一段」而不是「前 2 个逻辑帧」，同一段曲线会被判为违规——合法的「快速起步」设计会被误杀。此外总位移的取数口径（逻辑位移 vs 动画根位移）不一致时，占比会整体偏移。",
                 SourceRef = "GDD-v1.0.md §7.3 动画硬指标 ①",
+                RelatedAssertionIds = new List<string> { A24 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FDodgePush },
                 Veto = false
             },
@@ -145,6 +146,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-08（判据 F-HOLD + F-HITSTOP-CAUSAL）",
                 FalsePositiveCondition = "硬直 18/20/22 是**名义值**还是「含 hold 的总时长」在文档中未统一；两种解释下同一实现的读数差 hold 段（3.3–3.9 帧）。判据必须声明读数口径（本判据取「从受击起始到可再次行动的总帧数」）。",
                 SourceRef = "GDD-v1.0.md §7.3；IMPL-v3.0.md §3.1；GDD-v1.0.md §9.4 导表硬断言 #11 #12",
+                RelatedAssertionIds = new List<string> { A30 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FHold, CriterionOracle.FHitstopCausal },
                 Veto = false
             },
@@ -158,6 +160,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-09（time_scale 采样 + PhaseFrame 连续性）；人眼：HP-05（固定机位慢放，判「卡住 + 被顶开」同时成立）",
                 FalsePositiveCondition = "若实现把顿帧实现为 time_scale=0（完全冻结），本判据的数值部分仍能通过（0 ≤ 0.15），必须由人眼项补上「被顶开」这一半；而人眼项又依赖机位与慢放倍数写死，否则两人判定不一致。",
                 SourceRef = "GDD-v1.0.md §7.3 顿帧语义（D4）；IMPL-v2.0.md §7.1 歧义点 2",
+                RelatedAssertionIds = new List<string> { A30 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitstopCausal },
                 Veto = false
             },
@@ -172,7 +175,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "本判据只比「结构」不不比「颜色」：如果实现用同一套描边结构 + 不同颜色来区分霸体与无敌，本判据会判为违规——而那正是 IMPL §3.4 明文禁止的做法（不得用颜色通道），因此该误杀是设计意图内的。真正的风险在反方向：若描边结构参数存在但运行时未生效，数据层通过而画面不变——需配合 WC-13 的盲测兜住。",
                 SourceRef = "IMPL-v3.0.md §3.4；GDD-v1.0.md §9.4 导表硬断言 #6",
                 LinkedOracleIds = new List<string> { CriterionOracle.FVfxStructure },
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -186,7 +189,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "色差组若在显示器色准偏差的环境下录制，结论会随机器变化；必须记录显示器型号与色彩配置，且结论只用于定位、不作为 Gate。",
                 SourceRef = "GDD-v1.0.md §8.5 / §10.1",
                 NegativeCaseWaiver = "定位通道（B1 仅色差组）：按 GDD 10.1，其结果不达标不改方案，因此不配 Gate 级负向用例；采集规范由 NC-A12 的对照组协议覆盖。",
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -213,7 +216,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "本项没有可写的误判条件——正因如此它只能是观察项。若有人把它升级为 Gate，必须先补上可量化的判据与阈值，否则就会变成「看谁嗓门大」。",
                 SourceRef = "GDD-v1.0.md §8.5 / §10.1",
                 NegativeCaseWaiver = "观察项（B3 相机跟随）：GDD 10.1 明确不毙 Gate、转后续修复处理，且本条写不出量化的误判条件。",
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -266,7 +269,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "若某 Boss 的攻击本身没有落点（比如全身 AOE），「地面预警圈」这一通道物理上不存在，判据会把它判为违规。判据必须允许「全身 AOE 用全屏色调 + 音效」这一替代编码，并写明替代条件。",
                 SourceRef = "GDD-v1.0.md §8.5",
                 LinkedOracleIds = new List<string> { CriterionOracle.FTelegraphChannels },
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -280,7 +283,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "亮度差必须在**该副本的实拍背景**上取，而不是在纯色底或无背景的测试场景取；测试场景太干净会让「倒相」分支永远不触发，用例形同虚设。",
                 SourceRef = "GDD-v1.0.md §8.1 / §12.3 错例 4",
                 LinkedOracleIds = new List<string> { CriterionOracle.FInkContrast },
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -294,7 +297,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "扫描必须覆盖所有已导入材质而不是只扫角色目录；只扫角色的实现会漏掉 VFX / 场景材质里的 AdditionalMaterial。另外「全局关闭 Clear Coat」若只在资产层检查，被运行时 Instantiate 的材质会绕过。",
                 SourceRef = "GDD-v1.0.md §9.6",
                 LinkedOracleIds = new List<string> { CriterionOracle.FVfxChannel },
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -308,7 +311,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "判据量的是「碰撞体尺寸 / 视觉尺寸」的比例，而不是绝对尺寸——若只查「Collider 尺寸 == 1.4 × 基础值」，遇到基础值本身有偏差的实现就会被误杀。",
                 SourceRef = "GDD-v1.0.md §7.4",
                 LinkedOracleIds = new List<string> { CriterionOracle.FEliteHitbox },
-                Veto = false
+                Veto = false,
                 AxisNotApplicable = true,
             },
             new CriterionRecord
@@ -528,6 +531,7 @@ namespace EdgeChronicles.Tests.Qa
                 Expected = "判据必须报错：phases 各段 ≥1（A19 报红）。",
                 MeaningIfNotFired = "前摇为 0 的技能在数据层被放行 → 玩家没有任何可读的反应时间。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A19",
+                RelatedAssertionIds = new List<string> { A19 },
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord
@@ -537,6 +541,7 @@ namespace EdgeChronicles.Tests.Qa
                 Expected = "判据必须报错：hitShape.frame ≥ active（A20 报红）。",
                 MeaningIfNotFired = "判定帧落在 active 段之外 → 攻击要么永不生效，要么在错误时机生效；A20 已经「永远报绿」。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A20",
+                RelatedAssertionIds = new List<string> { A20 },
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord
@@ -546,6 +551,7 @@ namespace EdgeChronicles.Tests.Qa
                 Expected = "判据必须报错：allowTags 必须命中某个 skill.entryTags（A22 报红）。",
                 MeaningIfNotFired = "引用了不存在的标签 → 取消窗口永远匹配不上，或被静默忽略，产生「看起来有窗口、实际取消不了」的死窗口。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A22（该冲突另见 D-10）",
+                RelatedAssertionIds = new List<string> { A22 },
                 Channel = CriterionExecutability.AutoScript
             },
 
@@ -598,6 +604,7 @@ namespace EdgeChronicles.Tests.Qa
                 MeaningIfNotFired = "派生条目数被写死成 8 / 6 之后，任何新增派生都会被判为违规——而 §4.8.5 明确「不写死条数」。",
                 LegalDesignAtRisk = "**任何新增的技传派生条目（尤其是视觉层级为 generic / param 的那类）。** 派生清单是可以增长的；判据只能校验双向引用一致性，不能校验条数本身。",
                 SourceRef = "EL-03 §2 A33-1 / A33-5；IMPL-v3.0.md §4.8.5",
+                RelatedAssertionIds = new List<string> { A33-1 },
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord
@@ -656,7 +663,8 @@ namespace EdgeChronicles.Tests.Qa
             list.Add(CriterionOracle.A31); list.Add(CriterionOracle.A33);
             list.Add(CriterionOracle.A331); list.Add(CriterionOracle.A332); list.Add(CriterionOracle.A333);
             list.Add(CriterionOracle.A334); list.Add(CriterionOracle.A335); list.Add(CriterionOracle.A35);
-            list.Add(CriterionOracle.A39); list.Add(CriterionOracle.A40); list.Add(CriterionOracle.A43);
+            list.Add(CriterionOracle.A391); list.Add(CriterionOracle.A392);
+            list.Add(CriterionOracle.A40); list.Add(CriterionOracle.A43);
             list.Add(CriterionOracle.FHold); list.Add(CriterionOracle.FHitstopCausal);
             list.Add(CriterionOracle.FRecoveryGap); list.Add(CriterionOracle.FKbTier);
             list.Add(CriterionOracle.FKbPeak); list.Add(CriterionOracle.FDodgeInvuln);

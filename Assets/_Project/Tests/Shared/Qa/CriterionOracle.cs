@@ -42,7 +42,8 @@ namespace EdgeChronicles.Tests.Qa
         public const string A334 = "A33-4"; // derivative ∧ new_graphic ⇒ 必须有 id
         public const string A335 = "A33-5"; // new_graphic 行数 == 清单条数
         public const string A35 = "A35"; // mechanic_mod ∈ 28 项枚举
-        public const string A39 = "A39"; // 多来源同键合并
+        public const string A391 = "A39-1"; // 上限类多来源取最大
+        public const string A392 = "A39-2"; // 其余数值类取最小不叠加；离散类只生效一次
         public const string A40 = "A40"; // 掉落保底
         public const string A43 = "A43"; // 图集格位配额（两层）
 
@@ -389,6 +390,13 @@ namespace EdgeChronicles.Tests.Qa
             {
                 if (!MechanicModCatalog.IsLegal(s.StarNodes[i].MechanicMod)) { v.Add(A35); return; }
             }
+            // 络脉节点同样只允许合法机制项。
+            // 【为什么络脉更适合当负向夹具】络脉的数值列恒空，误写成自由字符串没有别的列可退化，
+            // 因此错误必然以"机制字段非法"的形式暴露出来。
+            for (int i = 0; i < s.Meridians.Count; i++)
+            {
+                if (!MechanicModCatalog.IsLegal(s.Meridians[i].MechanicMod)) { v.Add(A35); return; }
+            }
             for (int i = 0; i < s.Derivatives.Count; i++)
             {
                 for (int m = 0; m < s.Derivatives[i].MechanicTargets.Count; m++)
@@ -402,14 +410,55 @@ namespace EdgeChronicles.Tests.Qa
 
         private static void EvalA39(QaScenario s, CriterionVerdict v)
         {
-            // 同一来源不得重复给同一效果键；跨来源同键必须合并（相加），不得互相覆盖。
-            var seen = new Dictionary<string, string>(StringComparer.Ordinal);
-            for (int i = 0; i < s.EffectSources.Count; i++)
+            // A39-1：上限类多来源**取最大**。
+            // A39-2：其余数值类**取最小、不叠加**；离散类**只生效一次**。
+            // 【口径】判的是"合并规则"，不是"某次实现的结果"：
+            // 夹具同时给出各来源的原始值与最终合并值，判据据此验证规则。
+            for (int i = 0; i < s.EffectMerges.Count; i++)
             {
-                QaEffectSourceRow e = s.EffectSources[i];
-                string key = e.SourceKind + "|" + e.EffectKey;
-                if (seen.ContainsKey(key)) { v.Add(A39); return; }
-                seen[key] = e.EffectKey;
+                QaEffectMergeRow m = s.EffectMerges[i];
+                if (m.SourceValues.Count == 0) { continue; }
+
+                if (m.MergeClass == EffectMergeClass.CapUpper)
+                {
+                    float max = m.SourceValues[0];
+                    for (int k = 1; k < m.SourceValues.Count; k++)
+                    {
+                        if (m.SourceValues[k] > max) { max = m.SourceValues[k]; }
+                    }
+                    if (Math.Abs(m.MergedValue - max) > 1e-4f) { v.Add(A391); }
+                    continue;
+                }
+
+                if (m.MergeClass == EffectMergeClass.Numeric)
+                {
+                    float min = m.SourceValues[0];
+                    float sum = 0f;
+                    for (int k = 0; k < m.SourceValues.Count; k++)
+                    {
+                        sum += m.SourceValues[k];
+                        if (m.SourceValues[k] < min) { min = m.SourceValues[k]; }
+                    }
+                    // 取最小 ⇒ 不得叠加（叠加值只有在单来源时才会与 min 相等）
+                    if (m.SourceValues.Count > 1 && Math.Abs(m.MergedValue - sum) < 1e-4f
+                        && Math.Abs(sum - min) > 1e-4f)
+                    {
+                        v.Add(A392);
+                    }
+                    else if (Math.Abs(m.MergedValue - min) > 1e-4f)
+                    {
+                        v.Add(A392);
+                    }
+                    continue;
+                }
+
+                // 离散类：只生效一次 ⇒ 合并值必须等于某一个来源值，且不得是多个来源的叠加。
+                bool matchesOne = false;
+                for (int k = 0; k < m.SourceValues.Count; k++)
+                {
+                    if (Math.Abs(m.MergedValue - m.SourceValues[k]) < 1e-4f) { matchesOne = true; break; }
+                }
+                if (!matchesOne) { v.Add(A392); }
             }
         }
 
