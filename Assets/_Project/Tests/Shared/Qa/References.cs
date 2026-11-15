@@ -288,8 +288,8 @@ namespace EdgeChronicles.Tests.Qa
                 Summary = "movement_curve.keys 未声明量纲与含义（逐帧位移 m？归一化系数？）。",
                 SourceA = "IMPL-v2.0.md §5 表 5 movement_curve：keys[], distance, clampMode",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
-                Impact = "A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果见 D-13。",
-                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关""
+                Impact = "A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果与**判别力论证**见 D-13。",
+                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关"
             },
             new SpecConflict
             {
@@ -325,7 +325,7 @@ namespace EdgeChronicles.Tests.Qa
                 SourceA = "GDD-v1.0.md §10.1 W4「22 条走查表（9 条纯脚本 / 7 条混合 / 6 条必须人眼，每条带一个证伪案例）」",
                 SourceB = "GDD-v1.0.md §13「30 条用例（22 正向 + 24 A 类 + 6 B 类）」——同句内 22+24+6=52 ≠ 30",
                 Impact = "编号无法与正本对齐；本目录使用 QA 内部编号 WC-xx / NC-Axx / NC-Bxx 并逐条标注文档出处，等待正本确认后做一次映射。",
-                Resolution = "Registered"
+                Resolution = "Resolved · 判据编号的正本 = CriterionCatalog.cs（代码即正本）；GDD §10.1 / §13 与 IMPL §7 只留口径与门槛并指向正本，不复制清单。三层关系（全量判据 / 负向用例 30 / 正向走查 22）由 CriterionCatalog.DescribeRelations() 统一给出，防止三个数字各自漂移；对外正本编号沿用 GDD 既有 ID（C2 / D1a / D1b / D1b-obs / D2 / D4 / B1 / B2 / B3 / E2 / E3），内部键 WC-xx 保留为稳定引用键（CriterionRecord.CanonicalId）。"
             },
             new SpecConflict
             {
@@ -396,8 +396,8 @@ namespace EdgeChronicles.Tests.Qa
                 Summary = "movement_curve.keys 的口径已被生产 schema 写死为「归一化速度（0–1）」，但 A24（曲线积分距离与声明偏差 ≤5%）只有在 keys 是**逐帧归一化位移占比**（Σ = 1）时才成立：按速度解释，Σv 的量纲是帧⁻¹，Σv × d ≠ d。",
                 SourceA = "生产侧 EdgeChronicles.Data.CurveKey.value 的注释：归一化速度（0–1）",
                 SourceB = "IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5%",
-                Impact = "A24 目前没有唯一算法：不同实现会算出不同偏差值。本测试侧按**归一化位移占比**实现（积分 = Σ(keys) × 声明距离），并在此登记；若最终裁定为速度，A24 必须重写而不是改阈值。",
-                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关""
+                Impact = "A24 目前没有唯一算法：不同实现会算出不同偏差值。**决定性证据：占比口径会让 A24 变成永远报绿的废判据**——占比口径下积分距离 = distance × Σkeys，而 A24 恰好要求 Σkeys ≈ 1，于是 A24 等价于另一条断言「Σkeys = 1」，**声明距离不再是可判的量**（把 distance 改成任何值，偏差都是 0%）。速度口径下积分由 keys 独立算出（与声明距离无关），A24 才有判别力。测试侧两种口径都实现（CurveSemantics.Current 开关），任一口径下 43 条负向注入全部符合预期。",
+                Resolution = "Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关"
             }
         };
 

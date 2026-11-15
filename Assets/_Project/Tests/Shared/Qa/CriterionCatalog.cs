@@ -71,7 +71,7 @@ namespace EdgeChronicles.Tests.Qa
             {
                 Id = "WC-02",
                 Title = "闪避无敌帧：窗口存在且长度合法",
-                Statement = "闪避的无敌窗口长度（invuln_end − invuln_start）落在 1–14 帧，且 invuln_start ≥1，invuln_end ≤ 位移段帧数（帧，W 轴）。窗口生效期间敌方攻击判定必须落空。",
+                Statement = "闪避的无敌窗口长度（invuln_end − invuln_start）落在 1–14 帧，且 invuln_start ≥1，invuln_end ≤ 位移段帧数（帧，W 轴）。窗口生效期间敌方攻击判定必须落空。闪避是**门派共有动作**（无 entryTags 行），其标签 dodge 只出现在取消窗口的 allowTag 侧。",
                 Unit = QaUnit.Frame, Axis = QaClockAxis.WallClock,
                 Executability = CriterionExecutability.Mixed,
                 ExecutableAs = "自动：SC-02（窗口长度与位置，判据 F-DODGE-INVULN）+ PlayMode 无敌内不受伤；人眼：HP-02（对哑刀纵斩 10/10 成功）",
@@ -141,7 +141,7 @@ namespace EdgeChronicles.Tests.Qa
             {
                 Id = "WC-07",
                 Title = "击退距离落在三档区间",
-                Statement = "轻档 0.3–0.6m、中档 0.8–1.2m、重档 1.2–1.5m（米，W 轴）。区间含端点。",
+                Statement = "轻档 0.3–0.6m、中档 0.8–1.2m、重档 1.2–1.5m（米，W 轴）。区间含端点。取数口径：逻辑坐标统一用米（定点精度 1/1000 m），判据直接按米读数，不写换算式。",
                 Unit = QaUnit.Meter, Axis = QaClockAxis.WallClock,
                 Executability = CriterionExecutability.AutoScript,
                 ExecutableAs = "SC-06（判据 F-KB-TIER）",
@@ -169,7 +169,7 @@ namespace EdgeChronicles.Tests.Qa
             {
                 Id = "WC-09",
                 Title = "受击三档的硬直 / hold / 顿帧",
-                Statement = "轻 / 中 / 重三档：硬直 18 / 20 / 22 帧，hold 时长落在 [2,4] 帧，顿帧 2 / 4 / 6 帧（帧，W 轴）。顿帧上限以因果式判定：hitstop_time_scale × hitstop_frames ≤ 1。",
+                Statement = "轻 / 中 / 重三档：硬直 18 / 20 / 22 帧，顿帧 2 / 4 / 6 帧（帧，W 轴）。hold 落在 [2,4] 帧，按**同轴**公式重算：clip_W = anim_clip_length × 60 ÷ anim_fps，hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)；换算后 hold < 0 即报错（不取 0）。顿帧上限以因果式判定：hitstop_time_scale × hitstop_frames ≤ 1。",
                 Unit = QaUnit.Frame, Axis = QaClockAxis.WallClock,
                 Executability = CriterionExecutability.AutoScript,
                 ExecutableAs = "SC-08（判据 F-HOLD + F-HITSTOP-CAUSAL）",
@@ -191,7 +191,7 @@ namespace EdgeChronicles.Tests.Qa
             {
                 Id = "WC-10",
                 Title = "顿帧语义：卡住且被顶开",
-                Statement = "hitstop_time_scale = 0.15（无量纲倍率，作用在表现层时间）；击退起于命中帧并贯穿整个顿帧；顿帧把动画速度降到 15%，但**不冻结位移曲线**；顿帧不暂停 tick（PhaseFrame 继续走）。",
+                Statement = "hitstop_time_scale = 0.15（无量纲倍率，作用在表现层时间）；击退起于命中帧并贯穿整个顿帧；顿帧把动画速度降到 15%，但**不冻结位移曲线**；顿帧不暂停 tick（PhaseFrame 继续走）。收身起始进度是**参数**（受击剪辑元数据注入，默认 C9），后段窗口帧数读击退曲线的派生量——两者都不是写死的常数。",
                 Unit = QaUnit.Ratio, Axis = QaClockAxis.WallClock,
                 Executability = CriterionExecutability.Mixed,
                 ExecutableAs = "自动：SC-09（time_scale 采样 + PhaseFrame 连续性）；人眼：HP-05（固定机位慢放，判「卡住 + 被顶开」同时成立）",

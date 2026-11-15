@@ -169,6 +169,37 @@ namespace EdgeChronicles.Tests.Criteria
         }
 
         [Test]
+        public void 三层关系_负向三十与走查二十二互不相交()
+        {
+            // D-06 裁定：代码即正本，三条数字必须由同一部目录给出，不能各自漂移。
+            string relations = CriterionCatalog.DescribeRelations();
+            Assert.IsTrue(relations.Contains("负向用例 30 条"), "负向用例数不是 30：" + relations);
+            Assert.IsTrue(relations.Contains("正向走查 22 条"), "正向走查数不是 22：" + relations);
+
+            // 30 与 22 不相交：负向用例的 TargetCriterionId 不应等于任何走查判据的 Id。
+            for (int i = 0; i < CriterionCatalog.NegativeCases.Count; i++)
+            {
+                NegativeCaseRecord c = CriterionCatalog.NegativeCases[i];
+                Assert.IsNull(CriterionCatalog.FindCriterion(c.TargetCriterionId),
+                    "负向用例 " + c.Id + " 的目标判据 " + c.TargetCriterionId
+                    + " 与走查判据同名 —— 两套集合相交，三层关系就不成立了。");
+            }
+        }
+
+        [Test]
+        public void 每条走查判据_都声明了正本编号或明确为空()
+        {
+            // 正本编号沿用 GDD 既有 ID；没有的填 "—"，**不允许留空字符串**（那等于"忘了填"）。
+            var problems = new List<string>();
+            for (int i = 0; i < CriterionCatalog.Walkthrough.Count; i++)
+            {
+                CriterionRecord c = CriterionCatalog.Walkthrough[i];
+                if (string.IsNullOrEmpty(c.CanonicalId)) { problems.Add(c.Id + " 的 CanonicalId 为空"); }
+            }
+            Assert.IsEmpty(problems, "正本编号缺失：\n" + string.Join("\n", problems.ToArray()));
+        }
+
+        [Test]
         public void 规格冲突清单_每条都带出处与影响()
         {
             Assert.Greater(KnownSpecConflicts.All.Count, 0, "规格冲突清单为空——判据缺陷必须显式登记，不允许静默通过。");
