@@ -155,9 +155,9 @@ def check_commas(path, problems):
     with open(path, encoding="utf-8") as f:
         lines = f.read().split("\n")
     for i, ln in enumerate(lines):
-        # 先去掉行尾注释（枚举成员 `X = 0,   // 注释` 会把逗号藏在注释后面）
-        code = ln.split("//", 1)[0].strip()
-        stripped = code
+        # 去掉行尾注释与字符串内容（枚举成员 `X = 0,   // 注释` 会把逗号藏在注释后面；
+        # 而 `anchor://` 这样的内容里带 `//`，不能用朴素的 split("//")）
+        stripped = strip_code(ln).strip()
         if not stripped or stripped.startswith("//"):
             continue
         # 方法链续行（`.Select(...)`）不是成员赋值
@@ -176,7 +176,7 @@ def check_commas(path, problems):
             j += 1
         if j >= len(lines):
             continue
-        nxt = lines[j].split("//", 1)[0].strip()
+        nxt = strip_code(lines[j]).strip()
         if nxt.startswith("//") or nxt.startswith("}") or nxt.startswith("{"):
             continue
         if nxt.startswith("."):

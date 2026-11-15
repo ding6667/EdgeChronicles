@@ -153,15 +153,6 @@ namespace EdgeChronicles.Tests.Qa
         /// </summary>
         public List<string> RelatedAssertionIds = new List<string>();
         /// <summary>
-        /// GDD / IMPL 里已有的判据编号（如 C2、D1a、D1b、D2、D5、B1、B2、E3）。
-        /// 【为什么要保留这一列】设计线裁定「正本编号沿用 GDD 已有 ID，内部临时号映射后替换」；
-        /// 主理人裁定「CriterionCatalog.cs 就是编号的唯一真值源」。两条不冲突的正确做法是：
-        /// **代码目录是正本**，同时**把 GDD 已有编号作为映射列保留在同一条记录上**——
-        /// 这样 GDD / IMPL / 走查表三处只需改成引用本目录的 id，而不必各自再维护一套编号。
-        /// 没有 GDD 对应编号的填空串。
-        /// </summary>
-        public string LegacyDocId = "";
-        /// <summary>
         /// 该判据是否**确实不涉及任何时钟轴**（纯数据层判据，如描边结构、材质槽数量）。
         /// 为 false 时，时钟轴必须显式声明 —— 这是"量纲 + 时钟轴"铁律的例外通道，
         /// 用它来防止把"忘了写时钟轴"伪装成"不需要时钟轴"。
