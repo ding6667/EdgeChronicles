@@ -1,6 +1,6 @@
 # 开工清单 · 本机工具与环境
 
-> 适用：《拾锋录》单机 3D 动作 RPG，Unity 6 URP，团队为 AI 员工  
+> 适用：《EdgeChronicles》（游戏内名《拾锋录》）单机 3D 动作 RPG，**Unity 2022.3.62f3c1（Unity 中国版 LTS）· URP 14**，团队为 AI 员工  
 > 用法：照着装、照着勾。**A 组缺一项就动不了**；B 组影响效率；C 组是 AI 员工的运行条件。
 
 ---
@@ -11,7 +11,7 @@
 | --- | ---------------- | ------------------------------------- | ---------- | ----------------------- |
 | A1  | Windows          | 10 / 11 64 位                          | 目标平台       | —                       |
 | A2  | Unity Hub        | 3.x                                   | 版本管理       | unity.com/download      |
-| A3  | **Unity Editor** | **6000.0.23f1**                       | 引擎本体       | ⚠️ **这是建议值，尚未实测**，见 H 组 |
+| A3  | **Unity Editor** | **2022.3.62f3c1**（Unity 中国版 LTS）<br>可执行文件 `E://UnityHub//2022.3.62f3c1//Editor//Unity.exe` | 引擎本体 | ✅ **本机实测已装**，见 H 组 |
 | A4  | Unity 模块         | Windows Build Support (Mono + IL2CPP) | 出包         | Hub 勾选                  |
 | A5  | **IDE**          | **Rider 2024.3 LTS**（首选）或 VS2022 17.x | 写 C#       | 见下方两条备选                 |
 | A6  | MSVC             | v143 + Windows SDK 10.0.19041.0+      | 编译原生插件     | Rider 用户仍需装，Unity 编译依赖  |
@@ -122,7 +122,7 @@
 | -- | --------------------------------------------------------- | ---------------------------------------- |
 | E1 | `git clone` → `git lfs pull`                              | 文件不是指针文件                                 |
 | E2 | **现场验证 Unity 版本与包版本**（见 H 组）                              | 能打开工程即可                                  |
-| E3 | 用 Hub 指定 6000.0.xx 打开工程，**手工打开一次**完成 Library 重建（10–30 分钟） | 无报错                                      |
+| E3 | 用 Hub 指定 2022.3.62f3c1 打开工程，**手工打开一次**完成 Library 重建（10–30 分钟） | 无报错                                      |
 | E4 | 等包还原                                                      | `packages-lock.json` 无变更；`git status` 干净 |
 | E5 | `bash Tools/ci/check-compile.sh`                          | 退出码 0                                    |
 | E6 | `bash Tools/ci/check-data.sh`                             | 通过或 data-skip                            |
@@ -148,7 +148,7 @@
 
 **A 硬性**
 
-- [ ] Unity Hub / Unity **6000.0.23f1**（含 Windows Build Support）
+- [ ] Unity Hub / Unity **2022.3.62f3c1**（Unity 中国版 LTS，含 Windows Build Support）
 - [ ] Rider 2024.3 LTS（或 VS2022 三个组件）
 - [ ] MSVC v143 + Windows SDK 10.0.19041.0+
 - [ ] .NET SDK 8.0.4xx
@@ -182,7 +182,7 @@
 
 | 项                 | 当前值         | 状态                                                                         |
 | ----------------- | ----------- | -------------------------------------------------------------------------- |
-| Unity 版本          | 6000.0.23f1 | ⚠️ **建议值，未实测**。首次打开工程后以 `ProjectSettings/ProjectVersion.txt` 为真值，并把该文件提交入库 |
+| Unity 版本          | **2022.3.62f3c1**（Unity 中国版 LTS） | ✅ **本机实测已装并已激活**。真值为 `ProjectSettings/ProjectVersion.txt`（已入库）。可执行文件 `E://UnityHub//2022.3.62f3c1//Editor//Unity.exe`。**注意：这是 Unity 中国版，GitHub 托管镜像无预装，CI 需自托管 runner** |
 | URP               | 17.0.0      | ⚠️ 建议下限，实测后锁到 `packages-lock.json`                                         |
 | Input System      | 1.11.0      | 同上                                                                         |
 | Test Framework    | 1.4.5       | 同上                                                                         |

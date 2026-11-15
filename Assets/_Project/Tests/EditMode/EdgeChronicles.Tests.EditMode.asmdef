@@ -4,6 +4,7 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
+        "EdgeChronicles.Tests.Shared",
         "EdgeChronicles.Core",
         "EdgeChronicles.Data",
         "EdgeChronicles.Kernel"

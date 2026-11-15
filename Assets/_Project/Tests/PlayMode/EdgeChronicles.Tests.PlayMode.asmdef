@@ -1,0 +1,20 @@
+{
+    "name": "EdgeChronicles.Tests.PlayMode",
+    "rootNamespace": "EdgeChronicles.Tests.PlayMode",
+    "references": [
+        "UnityEngine.TestRunner",
+        "EdgeChronicles.Tests.Shared",
+        "EdgeChronicles.Core",
+        "EdgeChronicles.Data",
+        "EdgeChronicles.Kernel"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [ "nunit.framework.dll" ],
+    "autoReferenced": false,
+    "defineConstraints": [ "UNITY_INCLUDE_TESTS" ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
