@@ -245,6 +245,18 @@ def evaluate(s):
         if k["dmin"]<lim[0]-1e-4 or k["dmax"]>lim[1]+1e-4: add("F-KB-TIER")
         if k["peak"]>C["KbPeakMax"] or k["peak"]/C["WorstCaseFps"]>C["KbPerFrameMax"]+1e-4 or k["peak"]/s["fps"]>C["KbPerFrameMax"]+1e-4:
             add("F-KB-PEAK")
+    # F-HOLD-REACHABLE：hold 区间的上下限必须永远可测（构造空间被收窄时它会红）
+    below=False; above=False
+    for hs in range(12, 31):
+        for clip in range(1, 31):
+            for hstop in (2,4,6):
+                h = hs - clip - hstop*(1-0.15)
+                if h < C["HoldDurationMin"]: below=True
+                if h > C["HoldDurationMax"]: above=True
+            if below and above: break
+        if below and above: break
+    if not below or not above: add("F-HOLD-REACHABLE")
+
     d=s["dodge"]; span=d["end"]-d["start"]
     if span<1 or span>C["DodgeInvulnMaxSpan"] or d["start"]<1 or d["end"]>d["move"]: add("F-DODGE-INVULN")
     assets={a["id"]:a for a in s["vfxassets"]}
@@ -356,6 +368,12 @@ def inject_s(cid,s):
     elif cid=="S-13":
         for e in s["effects"]:
             if e["cls"]=="num": e["merged"]=13.0
+    elif cid=="S-14":
+        # 【D-14 第三条路】高于上限的可达值 4.8（重档硬直 22 → 23）
+        k=kb(s,"heavy"); k["hitstun"]=23; syn_hold(k)
+    elif cid=="S-15":
+        # hold 重算为负（clip 17 → −0.7），D-04 要求报错不取 0
+        k=kb(s,"light"); k["clip_c"]=17; syn_hold(k)
     else: raise SystemExit("no inject "+cid)
 
 TARGET={"NC-A01":"F-DODGE-INVULN","NC-A02":"F-HIT-FEEDBACK","NC-A03":"F-KB-DIRECTION","NC-A04":"F-KB-TIER",
@@ -367,7 +385,8 @@ TARGET={"NC-A01":"F-DODGE-INVULN","NC-A02":"F-HIT-FEEDBACK","NC-A03":"F-KB-DIREC
 "NC-B01":"F-BLADE-OCCLUSION","NC-B02":"F-PULSE-WINDOW","NC-B03":"F-KB-PEAK","NC-B04":"F-EDGE-LEVELS",
 "NC-B05":"A33-1","NC-B06":"F-HOLD"}
 ST={"S-01":"A21","S-02":"A21","S-03":"A23","S-04":"A24","S-05":"A25","S-06":"A26","S-07":"A27",
-"S-08":"A28","S-09":"A29","S-10":"A30","S-11":"A35","S-12":"A39-1","S-13":"A39-2"}
+"S-08":"A28","S-09":"A29","S-10":"A30","S-11":"A35","S-12":"A39-1","S-13":"A39-2",
+"S-14":"F-HOLD","S-15":"F-HOLD"}
 
 COMPANIONS={"NC-A16":{"F-RECOVERY-GAP"},"NC-A22":{"A21"}}
 
@@ -417,7 +436,7 @@ def main():
             print("       " + f)
         return 1
 
-    print("[OK   ] 合法基线零报红；30 条规范集（24 A 类 + 6 B 类）+ 13 条补充集"
+    print("[OK   ] 合法基线零报红；30 条规范集（24 A 类 + 6 B 类）+ 15 条补充集"
           "在两种曲线口径下全部符合预期")
     return 0
 

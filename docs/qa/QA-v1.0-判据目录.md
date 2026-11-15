@@ -30,7 +30,7 @@
 
 ### 三层关系（D-06 裁定：代码即正本）
 
-> 全量判据 **70** 条（在册）→ **负向用例 30** 条（24 A 类 + 6 B 类）+ **正向走查 22** 条（9 纯脚本 + 7 混合 + 6 必须人眼）。
+> 全量判据 **71** 条（在册）→ **负向用例 30** 条（24 A 类 + 6 B 类）+ **正向走查 22** 条（9 纯脚本 + 7 混合 + 6 必须人眼）。
 > 推导关系：**30 与 22 都从属于全量判据，且两者互不相交**。
 > 三条数字不是并列的三个总数，而是**同一本目录的三个切面**——由 `CriterionCatalog.DescribeRelations()` 统一给出，防止它们各自漂移。
 
@@ -58,13 +58,13 @@ GDD §10.1 / §12 / §13 与 IMPL §7 一律改为**引用这里的 id**，不�
 
 | 层 | 数量 | 含义 | 关系 |
 |---|---|---|---|
-| 全量判据 | **70** | 所有可判定项（22 走查 + 48 断言 / 打击感判据） | — |
+| 全量判据 | **71** | 所有可判定项（22 走查 + 49 断言 / 打击感判据） | — |
 | 负向用例 | **30** | 24 A 类（灵敏度）+ 6 B 类（特异性） | ⊆ 全量判据 |
 | 正向走查 | **22** | 9 纯脚本 + 7 混合 + 6 必须人眼 | ⊆ 全量判据 |
 
 **负向用例 ∩ 正向走查 = ∅**（30 + 22 = 52 条互不重叠）：正向走查回答「要满足什么」，负向用例回答「注入错误后判据还报不报」。
 
-> 全量数从 69 变 70 是因为 **A39 拆成 A39-1 / A39-2**（语义变了，判据条数 +1）。
+> 全量数的变化都对应**语义变更**：69 → 70 是 A39 拆成 A39-1 / A39-2；70 → 71 是新增 F-HOLD-REACHABLE（D-14 第三条路：保证 hold 区间的上下限永远可测）。
 > 数字写在代码里（`CriterionCounts`），文档只引用、不复述——复述即第二个真值源。
 
 ### GDD 已有编号的映射
@@ -205,7 +205,7 @@ GDD 里没有正文定义的编号（**A2 / A4**）暂留空——**宁可空着
 
 #### `WC-09` 受击三档的硬直 / hold / 顿帧
 
-- **判据**：轻 / 中 / 重三档：硬直 18 / 20 / 22 帧，顿帧 2 / 4 / 6 帧（帧，W 轴）。hold 落在 [2,4] 帧，按**同轴**公式重算：clip_W = anim_clip_length × 60 ÷ anim_fps，hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)；换算后 hold < 0 即报错（不取 0）。顿帧上限以因果式判定：hitstop_time_scale × hitstop_frames ≤ 1。
+- **判据**：轻 / 中 / 重三档：硬直 18 / 20 / 22 帧，顿帧 2 / 4 / 6 帧（帧，W 轴）。hold 的**设计意图区间**是 [2,4] 帧（三档实测落在 3.3–3.9 帧；区间与实况两句都要写，否则会误以为能取到端点），按**同轴**公式重算：clip_W = anim_clip_length × 60 ÷ anim_fps，hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)；换算后 hold < 0 即报错（不取 0）。顿帧上限以因果式判定：hitstop_time_scale × hitstop_frames ≤ 1。
 - **量纲 / 时钟轴**：帧 / W 墙钟
 - **可执行化**：纯脚本 → SC-08（判据 F-HOLD + F-HITSTOP-CAUSAL）
 - **自身的误判条件**：硬直 18/20/22 是**名义值**还是「含 hold 的总时长」在文档中未统一；两种解释下同一实现的读数差 hold 段（3.3–3.9 帧）。判据必须声明读数口径（本判据取「从受击起始到可再次行动的总帧数」）。
@@ -391,7 +391,7 @@ GDD 里没有正文定义的编号（**A2 / A4**）暂留空——**宁可空着
 | 编号 | 冲突内容 | 出处 A | 出处 B | 影响 | 处置 |
 |---|---|---|---|---|---|
 | `D-01` | hit_shape.angle 未声明是整角还是半角。同一个 120 既可能是 120° 的扇形，也可能是 ±120°（240°）的扇形。 | IMPL-v2.0.md §3.1 hitShapes[].angle（无口径说明） | IMPL-v2.0.md §3.4 真实技能样例：sector angle=120 | 命中判定与 Boss 预警范围（哑刀横斩 180° 扇形 3m）会因解释不同而相差一倍；命中几何单测无法给唯一期望值。 | **Resolved · 整角（0–360°），120 即 120°；工程侧按「扇形张角」实现，与测试侧参考实现一致** |
-| `D-02` | movement_curve.keys 未声明量纲与含义（逐帧位移 m？归一化系数？）。 | IMPL-v2.0.md §5 表 5 movement_curve：keys[], distance, clampMode | IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5% | A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果与**判别力论证**见 D-13。 | Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关 |
+| `D-02` | movement_curve.keys 未声明量纲与含义（逐帧位移 m？归一化系数？）。 | IMPL-v2.0.md §5 表 5 movement_curve：keys[], distance, clampMode | IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5% | A24 的积分算法无唯一解；不同实现会得到不同偏差值，判据不可复现。工程侧已按\"归一化速度\"写 schema，该形态的具体后果与**判别力论证**见 D-13。 | **Resolved · **落逐帧速度（m/s，非归一化）**。两票一致：主理人裁定 + 设计线已撤回归一化方案（美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。测试侧把口径固化为 CurveSemantics.Current = SpeedMetersPerSecond，归一化口径在枚举里保留为已归档的备选方案。** |
 | `D-03` | A33 的「tier ↔ unlock_type 一一对应」与 §4.5.4 的 40 阶明细矛盾：迅锋 / 裂石 / 回锋 / 缚锋 共 16 行的阶位类型与模板不一致；缚锋「破势」在 tier 2，同时违反 A33-2（派生 tier ∈ {3,5}）。 | IMPL-v3.0-EL-03-progression.md §2 A33 + A33-2 | IMPL-v3.0.md §4.5.4 全 40 阶明细 + §4.5.3 通用派生模板 | 照 A33 实现导表器，会拦掉 §4.5.4 定义的 16 条合法阶位数据；照 §4.5.4 实现，A33 永远报红。二者必有一错。 | **Resolved · 判据错、规格对：A33 改为「阶位不变量」（每技能 5 阶恰好覆盖 5 种 unlock_type 各一次；tier 1 恒 stat；tier 5 恒 mechanic；中间 3 阶顺序由技能自定义）；A33-2 的 tier 集合由 {3,5} 放宽为 {1,2,3,5}** |
 | `D-04` | 受击 hold 时长公式把 anim_clip_length 当成与 hitstun_frames 同量纲相减（帧 − 帧），但两者分属剪辑轴 C 与墙钟轴 W；且 hold 的定义是「硬直扣掉剪辑与顿帧后的剩余」还是「hold 段本身长度」在文中两义。 | GDD-v1.0.md §9.4 skill 表：hitstun_hold_duration = hitstun_frames − anim_clip_length − hitstop_frames × (1 − hitstop_time_scale) | GDD-v1.0.md §7.3 时钟轴约定：t(C_i) = (i − 1) 帧，跨轴相减必错 | 公式在 W 轴下算出 3.3 / 3.6 / 3.9，而断言 hold ∈ [2,4] 按此取值成立；一旦剪辑长度改成 12 帧（13→12）即算出 4.3 → 越界。若 hold 语义实为「剩余时长」而非「段长」，则整段判据的物理含义要重写。 | **Resolved · hold = 硬直结束时刻 − 收身段结束时刻（只算 hold 不含收身）；公式必须同轴：clip_W = anim_clip_length × 60 ÷ anim_fps 先换算到 W 轴再相减；换算后 hold < 0 报错、不取 0** |
 | `D-05` | 顿帧上限的因果式与其展开式在「收身起始进度」变化时不同步：断言只校验 (9 − 6) − 0.15h ≥ 2，把 9 写死为常数。 | GDD-v1.0.md §9.4 断言 12 展开式：(收身起始进度 − 后段窗口帧数) − hitstop_time_scale × hitstop_frames ≥ 2 | GDD-v1.0.md 治理规则 12：上限要写成因果式；且 3 应写成 (收身起始进度 − 后段窗口帧数) | 收身起始从 C10 挪到 C12 时，硬编码 9 的实现会静默算错——这正是治理规则 12 举的反例本身。 | **Resolved · 收身起始是参数（默认 C9）不是常数；后段窗口帧数读击退曲线的派生量（knockback_curve_frames 末段），6 只是当前默认值** |
@@ -399,11 +399,11 @@ GDD 里没有正文定义的编号（**A2 / A4**）暂留空——**宁可空着
 | `D-07` | 工程基线版本与工程实际不一致：文档锁定 Unity 6000.0.23f1 + URP 17.0.x + Input System 1.11.x，实际工程是 Unity 2022.3.62f3c1 + URP 14.0.11 + Input System 1.7.0。 | IMPL-v3.0-EL-03-progression.md §6 工具链前提 | ProjectSettings/ProjectVersion.txt、Packages/manifest.json | CI 脚本按 6000.0.23f1 找解释器会找不到；URP 14 与 17 的描边 / GBuffer 行为不同，§9.6 视觉通道断言的期望值可能不成立。 | **Resolved · 以实装为准：Unity 2022.3.62f3c1 + URP 14.0.11（文档基线 6000.0.23f1 / URP 17 是建议值未实测）；判据期望值按 URP 14 实测校准，不按 URP 17 文档预期** |
 | `D-08` | CI 脚本 check-progression.sh 调用的 -executeMethod 命名空间与实际程序集不一致：脚本写 ShiFeng.Tools.Editor.Ci.ProgressionAudit，工程里是 EdgeChronicles.Tools.Editor。 | Tools/ci/check-progression.sh | Assets/_Project/Editor/EdgeChronicles.Tools.Editor.asmdef（rootNamespace = EdgeChronicles.Tools.Editor） | 养成数据完整性检查这一条 CI 入口目前必然失败（找不到方法）。 | **Resolved · 命名空间已修为 EdgeChronicles.Tools.Editor.Ci.*；残余问题是该门面类尚未建立（属工程侧），并已由 Tools/build/ci-entrypoint-check.sh 做文件级预检** |
 | `D-09` | A29「连段模拟不产生负资源」没有定义**模拟序列**：用哪条连段、单次给多少层、8 秒衰减怎么算，文档里都没有；锋芒层数规则散落在 GDD §9.1 / IMPL §9.1。 | IMPL-v2.0.md §5 断言 A29：连段模拟不产生负资源 | GDD-v1.0.md §9.1 / IMPL-v2.0.md §9.1：锋芒上限 5 层、命中按表给层单次 ≤1、8 秒未获新层则每 2 秒掉 1 层 | 没有规定连段序列与时间步长，A29 的执行结果不可复现——不同的模拟序列会得出相反的结论（同一串招在 8 秒内打完不衰减，拖过 8 秒就衰减）。判据必须先固定一条**标准连段序列 + 时间步长**，否则它是不可判定的。 | Registered |
-| `D-14` | hold 的区间端点 2.0 / 4.0 帧在 time_scale = 0.15 下**不可达**：hold = 整数(硬直) − 整数(clip_W) − hitstop×0.85，而 0.85 × {2,4,6} = {1.7, 3.4, 5.1}，故 hold 的小数部分恒为 .3 / .6 / .7，永不等于 2.0 或 4.0。 | GDD-v1.0.md §9.4 导表硬断言 #11：hold ∈ [2,4]（闭区间写法） | 【D-04 裁定】hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)，time_scale = 0.15 | 闭区间判据的「端点归属」这条性质**在 hold 上无法被验证**——不存在任何合法取值能取到端点。后果：① 「区间含端点」这条通用规则在 hold 上是空转；② 判据的实际有效范围是 [2.3, 3.9] 之类的离散可达值集合，而文档写的是 [2,4]，两者不等价。修正方向二选一：把 hold 规格改成可达值集合，或把 time_scale 改成能让 hold 落在整帧上的值（如 0.2 → 0.8×hitstop，hitstop=2 → 1.6，仍不可达……需另行裁定），**不得**为了好看把断言改成开区间来「规避」这个问题。 | Registered |
+| `D-14` | hold 的区间端点 2.0 / 4.0 帧在 time_scale = 0.15 下**不可达**：hold = 整数(硬直) − 整数(clip_W) − hitstop×0.85，而 0.85 × {2,4,6} = {1.7, 3.4, 5.1}，故 hold 的小数部分恒为 .3 / .6 / .9（轻/中/重），永不等于 2.0 或 4.0。 | GDD-v1.0.md §9.4 导表硬断言 #11：hold ∈ [2,4]（闭区间写法） | 【D-04 裁定】hold = hitstun_frames − clip_W − hitstop_frames × (1 − hitstop_time_scale)，time_scale = 0.15 | 闭区间判据的「端点归属」这条性质**在 hold 上无法被验证**——不存在任何合法取值能取到端点（但这不构成问题：判据要区分的是「在区间内 vs 在区间外」，而低于下限与高于上限的可达值都存在）。后果：① 「区间含端点」这条通用规则在 hold 上是空转；② 判据的实际有效范围是 [2.3, 3.9] 之类的离散可达值集合，而文档写的是 [2,4]，两者不等价。修正方向二选一：把 hold 规格改成可达值集合，或把 time_scale 改成能让 hold 落在整帧上的值（如 0.2 → 0.8×hitstop，hitstop=2 → 1.6，仍不可达……需另行裁定），**不得**为了好看把断言改成开区间来「规避」这个问题。 | **Resolved · **第三条路**（主理人裁定）：① hold 规格表述改准 ——「hold ∈ [2,4]」是设计意图区间，实测值落在 3.3–3.9，两句都要写（只写区间会让人以为能取到端点；只写实况会让人以为区间多余）；② 负向用例改用「低于下限的可达值」(hold = 1.3) 与「高于上限的可达值」(hold = 4.8)，不用恰好等于端点；③ 新增断言 F-HOLD-REACHABLE：保证上下限永远可测（构造空间被收窄时它会红并提醒更新负向用例）。**不调 time_scale、不改取整口径、不改区间开闭** —— 那三样都是为了让测试好写而动产品的物理量，而 hold 的物理量今天是对的。** |
 | `D-10` | 取消窗口的标签口径不一致：8 个技能的 entryTags 为 core/light/heavy/dash/control/guard/channel/finisher，**没有 \"dodge\"**；但 IMPL-v2.0 §3.4 的真实技能样例 cancelWindows.allowTags = [\"light\", \"dodge\"]。 | IMPL-v2.0.md §5 断言 A22：cancelWindow 的标签必须存在于某 skill.entryTags | IMPL-v2.0.md §3.4 真实技能样例：allowTags 含 \"dodge\"；IMPL-v3.0.md §1.2 的 8 技能 entryTags 无 dodge（回锋为 dash） | 照 A22 实现导表器，会把规范里给出的那条真实样例窗口判为非法——判据与唯一真值源自相矛盾。 | **Resolved · 判据错、规格对：A22 的判定集合改为「标签全集」= 8 技能 entryTags ∪ 门派共有动作标签 {dodge, attack}；dodge 只作 allowTag，不作 sourceTag** |
 | `D-11` | 逻辑坐标的单位是**厘米定点**，而判据体系声明的距离单位是**米**。Core 的 Vec2 以 1/100 m 为定点单位（UnitsPerMeter = 100），判据（轻 0.3–0.6m / 中 0.8–1.2m / 重 1.2–1.5m、击退峰值 18 m/s）全部按米写。 | 生产侧 EdgeChronicles.Core.Vec2：UnitsPerMeter = 100、UnitsPerCentimeter = 1（定点，厘米） | GDD-v1.0.md §7.3 / IMPL-v3.0.md §3.2：击退距离以米声明；本目录全部距离量纲 = m | 击退距离类判据（F-KB-TIER / F-KB-PEAK / WC-07）若直接与逻辑坐标相减，会把厘米当米 —— 差 100 倍。判据必须显式声明取数口径（逻辑坐标 ÷ 100 = 米），否则结论永远是假的。**判据侧未声明转换即成立**。 | **Resolved · 逻辑坐标统一用米，定点精度 1/1000 m（毫米）；改坐标而不是给每个距离判据写换算式** |
 | `D-12` | hit_shape.frame 的时钟轴标注与比较对象矛盾：Data schema 写「命中帧（相对本技能起手，**C 轴帧**；必须 < 判定帧数）」，但它要与 active 段（墙钟 / 逻辑相段长度）比较。 | 生产侧 EdgeChronicles.Data.HitShapeRow.frame 的注释：C 轴帧 | IMPL-v2.0.md §5 断言 A20：hitShape.frame < active（active 是相段长度，属逻辑帧） | 跨轴相减必错。若 frame 真的是剪辑轴帧号而 active 是逻辑帧数，两者的比较在不同实现下会差若干帧 —— A20 可能永远报绿，也可能永远报红。必须裁定 frame 归属哪根时钟，并把比较写成同轴符号式。 | **Resolved · 技能相位（startup / active / recovery）统一为墙钟 W 帧；anim_clip_length 是 C 轴只用于算 hold 起点；hit_shape.frame 的轴标注由 C 改为 W，比较变为同轴** |
-| `D-13` | movement_curve.keys 的口径已被生产 schema 写死为「归一化速度（0–1）」，但 A24（曲线积分距离与声明偏差 ≤5%）只有在 keys 是**逐帧归一化位移占比**（Σ = 1）时才成立：按速度解释，Σv 的量纲是帧⁻¹，Σv × d ≠ d。 | 生产侧 EdgeChronicles.Data.CurveKey.value 的注释：归一化速度（0–1） | IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5% | A24 目前没有唯一算法：不同实现会算出不同偏差值。**决定性证据：占比口径会让 A24 变成永远报绿的废判据**——占比口径下积分距离 = distance × Σkeys，而 A24 恰好要求 Σkeys ≈ 1，于是 A24 等价于另一条断言「Σkeys = 1」，**声明距离不再是可判的量**（把 distance 改成任何值，偏差都是 0%）。速度口径下积分由 keys 独立算出（与声明距离无关），A24 才有判别力。测试侧两种口径都实现（CurveSemantics.Current 开关），任一口径下 43 条负向注入全部符合预期。 | Pending · 两条裁定冲突（主理人：逐帧速度 m/s；设计线变更单：逐帧归一化位移占比 Σ=1）。已实现为显式开关 CurveSemantics.Current，两种口径下基线均合法，裁定落哪边只改这一个开关 |
+| `D-13` | movement_curve.keys 的口径已被生产 schema 写死为「归一化速度（0–1）」，但 A24（曲线积分距离与声明偏差 ≤5%）只有在 keys 是**逐帧归一化位移占比**（Σ = 1）时才成立：按速度解释，Σv 的量纲是帧⁻¹，Σv × d ≠ d。 | 生产侧 EdgeChronicles.Data.CurveKey.value 的注释：归一化速度（0–1） | IMPL-v2.0.md §5 断言 A24：曲线积分距离与声明偏差 ≤5% | A24 目前没有唯一算法：不同实现会算出不同偏差值。**决定性证据：占比口径会让 A24 变成永远报绿的废判据**——占比口径下积分距离 = distance × Σkeys，而 A24 恰好要求 Σkeys ≈ 1，于是 A24 等价于另一条断言「Σkeys = 1」，**声明距离不再是可判的量**（把 distance 改成任何值，偏差都是 0%）。速度口径下积分由 keys 独立算出（与声明距离无关），A24 才有判别力。测试侧两种口径都实现（CurveSemantics.Current 开关），任一口径下 43 条负向注入全部符合预期。 | **Resolved · **落逐帧速度（m/s，非归一化）**。两票一致：主理人裁定 + 设计线已撤回归一化方案（美术规格写死 MP_HERO_* 单位为 m/s；且归一化方案下 distance 根本不进断言，A24 会退化成格式检查）。测试侧把口径固化为 CurveSemantics.Current = SpeedMetersPerSecond，归一化口径在枚举里保留为已归档的备选方案。** |
 
 **判据与被测规格冲突时，正确动作是改判据或改规格，不是放宽阈值**；但改哪一边属于规格裁定权，不在 QA。
 

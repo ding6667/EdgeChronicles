@@ -1,7 +1,7 @@
 # 开工清单 · 本机工具与环境
 
 > 适用：《EdgeChronicles》（游戏内名《拾锋录》）单机 3D 动作 RPG，**Unity 2022.3.62f3c1（Unity 中国版 LTS）· URP 14**，团队为 AI 员工  
-> 用法：照着装、照着勾。**A 组缺一项就动不了**；B 组影响效率；C 组是 AI 员工的运行条件。
+> 用法：照着装、照着勾。**T 组缺一项就动不了**；B 组影响效率；C 组是 AI 员工的运行条件。
 
 ---
 
@@ -9,17 +9,17 @@
 
 | #   | 工具               | 版本 / 要求                               | 用途         | 说明                      |
 | --- | ---------------- | ------------------------------------- | ---------- | ----------------------- |
-| A1  | Windows          | 10 / 11 64 位                          | 目标平台       | —                       |
-| A2  | Unity Hub        | 3.x                                   | 版本管理       | unity.com/download      |
-| A3  | **Unity Editor** | **2022.3.62f3c1**（Unity 中国版 LTS）<br>可执行文件 `E://UnityHub//2022.3.62f3c1//Editor//Unity.exe` | 引擎本体 | ✅ **本机实测已装**，见 H 组 |
-| A4  | Unity 模块         | Windows Build Support (Mono + IL2CPP) | 出包         | Hub 勾选                  |
-| A5  | **IDE**          | **Rider 2024.3 LTS**（首选）或 VS2022 17.x | 写 C#       | 见下方两条备选                 |
-| A6  | MSVC             | v143 + Windows SDK 10.0.19041.0+      | 编译原生插件     | Rider 用户仍需装，Unity 编译依赖  |
-| A7  | .NET SDK         | 8.0.4xx                               | 导表器与 CI 工具 |                         |
-| A8  | Git for Windows  | **≥ 2.40**                            | 版本控制       |                         |
-| A9  | Git LFS          | **≥ 3.5**                             | 大文件        | `git lfs install`       |
-| A10 | 远端仓库             | GitHub / Gitee **私有库**                | 同步         |                         |
-| A11 | Unity 许可证        | Personal（`.ulf`）或 Pro                 | 打开工程       | Hub 内登录                 |
+| T1  | Windows          | 10 / 11 64 位                          | 目标平台       | —                       |
+| T2  | Unity Hub        | 3.x                                   | 版本管理       | unity.com/download      |
+| T3  | **Unity Editor** | **2022.3.62f3c1**（Unity 中国版 LTS）<br>可执行文件 `E:/UnityHub/2022.3.62f3c1/Editor/Unity.exe` | 引擎本体 | ✅ **本机实测已装**，见 H 组 |
+| T4  | Unity 模块         | Windows Build Support (Mono + IL2CPP) | 出包         | Hub 勾选                  |
+| T5  | **IDE**          | **Rider 2024.3 LTS**（首选）或 VS2022 17.x | 写 C#       | 见下方两条备选                 |
+| T6  | MSVC             | v143 + Windows SDK 10.0.19041.0+      | 编译原生插件     | Rider 用户仍需装，Unity 编译依赖  |
+| T7  | .NET SDK         | 8.0.4xx                               | 导表器与 CI 工具 |                         |
+| T8  | Git for Windows  | **≥ 2.40**                            | 版本控制       |                         |
+| T9  | Git LFS          | **≥ 3.5**                             | 大文件        | `git lfs install`       |
+| T10 | 远端仓库             | GitHub / Gitee **私有库**                | 同步         |                         |
+| T11 | Unity 许可证        | Personal（`.ulf`）或 Pro                 | 打开工程       | Hub 内登录                 |
 
 **A5 两条备选**
 
@@ -182,17 +182,18 @@
 
 | 项                 | 当前值         | 状态                                                                         |
 | ----------------- | ----------- | -------------------------------------------------------------------------- |
-| Unity 版本          | **2022.3.62f3c1**（Unity 中国版 LTS） | ✅ **本机实测已装并已激活**。真值为 `ProjectSettings/ProjectVersion.txt`（已入库）。可执行文件 `E://UnityHub//2022.3.62f3c1//Editor//Unity.exe`。**注意：这是 Unity 中国版，GitHub 托管镜像无预装，CI 需自托管 runner** |
-| URP               | 17.0.0      | ⚠️ 建议下限，实测后锁到 `packages-lock.json`                                         |
-| Input System      | 1.11.0      | 同上                                                                         |
-| Test Framework    | 1.4.5       | 同上                                                                         |
-| Profiling Core    | 1.0.0       | 同上                                                                         |
-| Animation Rigging | 1.3.0       | **必需**：弓手上半身 Override Layer + AvatarMask + TwoBoneIK                       |
-| AI Navigation     | 2.0.5       | 敌人导航                                                                       |
-| Cinemachine       | 3.1.0       | 可选：MVP 用自写定点相机                                                             |
+| Unity 版本          | **2022.3.62f3c1**（Unity 中国版 LTS） | ✅ **本机实测已装并已激活**。真值为 `ProjectSettings/ProjectVersion.txt`（已入库）。可执行文件 `E:/UnityHub/2022.3.62f3c1/Editor/Unity.exe`。**注意：这是 Unity 中国版，GitHub 托管镜像无预装，CI 需自托管 runner** |
+| URP               | **14.0.11** | ✅ 已装，以 `packages-lock.json` 为准 |
+| Input System      | **1.7.0** | ✅ 已装，同上 |
+| Test Framework    | **1.1.33** | ✅ 已装，同上 |
+| Profiling Core    | **1.0.2** | ✅ 已装，同上 |
+| Animation Rigging | **1.2.1** | ✅ 已装。**必需**：弓手上半身 Override Layer + AvatarMask + TwoBoneIK |
+| AI Navigation     | **1.1.5** | ✅ 已装。敌人导航 |
+| Cinemachine       | **不引入** | MVP 用自写定点相机；引入反而多一个版本漂移源 |
 | Newtonsoft        | **不引入**     | 存档用内建 `JsonUtility`                                                        |
 
-> **规则**：以上版本号是**建议下限**，不是实测结论。首次打开工程后，Unity 会解析出实际可用版本——**以那时的 `packages-lock.json` 为准**，并在 PR 里说明改动。任何人单独升级包版本，都必须同步更新本表。
+> **规则**：以上版本号已按**本机实测**锁定（Unity 2022.3.62f3c1 / Unity 中国版 LTS），**最终真值为 `Packages/packages-lock.json`**——Unity 解析出的实际版本以它为准。任何人单独升级包版本，**必须同步更新本表与 manifest**，否则又制造一份第二真值源。
+> **Unity 中国版注意**：不在 GitHub 托管镜像的预装列表里，CI 必须用自托管 runner（见 `docs/release/CI-SETUP.md`）。
 
 ---
 

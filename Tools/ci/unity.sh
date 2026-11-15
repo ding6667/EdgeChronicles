@@ -109,20 +109,13 @@ is_project_locked() {
   local python
   for python in python3 python; do
     if command -v "$python" >/dev/null 2>&1; then
-      "$python" - "$lockfile" <<'PY' >/dev/null 2>&1
-import sys
+      "$python" -c "import sys
 try:
-    f = open(sys.argv[1], 'r+b')
+    f = open(sys.argv[1], 'r+b'); f.close()
 except OSError:
     sys.exit(1)
-try:
-    import os
-    os.close(f.fileno())
-except Exception:
-    pass
-sys.exit(0)
-PY
-      # 退出码 0 = 独占打开成功 = 残留锁文件；1 = 被占用
+sys.exit(0)" "$lockfile"
+      # 退出码 0 = 独占打开成功 = 残留锁文件（不占用）；1 = 被占用
       return $?
     fi
   done
