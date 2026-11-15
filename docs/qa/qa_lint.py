@@ -222,6 +222,27 @@ def check_banned(path, problems):
 
 
 
+
+def check_element_commas(path, problems):
+    """L2b：集合初始化器的**元素之间**必须用逗号分隔。
+
+    【为什么单列一项】对象初始化器里，成员之间靠逗号；集合初始化器里，
+    **元素之间**也靠逗号 —— 两者是两种不同的分隔，漏哪种都会报在闭合括号处，
+    看起来都像「行号指错了地方」。本项目在这一类上栽过一次：
+    集合里的一个元素结尾 '}' 后面漏了逗号，编译器在下一行报「',' expected」。
+    """
+    with open(path, encoding="utf-8") as f:
+        lines = f.read().split("\n")
+    for i, ln in enumerate(lines):
+        stripped = ln.strip()
+        if stripped != "}":
+            continue
+        nxt = lines[i + 1].strip() if i + 1 < len(lines) else ""
+        if nxt.startswith("new ") or nxt == "{":
+            problems.append("%s:%d 集合初始化器的元素结尾 '}' 后面缺逗号（下一行是 %s）"
+                            % (path, i + 1, nxt[:40]))
+
+
 def check_initializers(root, problems):
     """L7：对象初始化器里赋值的成员必须真实存在于目标类。
 
@@ -310,6 +331,8 @@ def main():
         check_encoding(p, problems)
         check_banned(p, problems)
     check_initializers(root, problems)
+    for p in files:
+        check_element_commas(p, problems)
 
     mirror = os.path.join(root, "docs", "qa", "qa_oracle_mirror.py")
     if os.path.exists(mirror):

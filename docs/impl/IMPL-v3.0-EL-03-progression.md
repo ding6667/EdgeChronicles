@@ -18,6 +18,7 @@
 | `cost_eu` | int | 1–60 EU | 是 | — | 否 |
 | `effect_key` | string | `eff_*`；**离散 / 次数 / 帧类节点用它**，与 `mechanic_mod` **互斥** | 条件必填 | 效果表 | 否 |
 | `effect_value` | float | 0.01–1.00（**只存系数，不存绝对值**）；与 `mechanic_mod` **互斥** | 条件必填 | — | 否 |
+| `node_type` | enum | `discrete`离散 / `count`次数 / `frame`帧 / `mechanic`机制（**手填**；C6 复算消耗的类型系数输入：离散 / 帧 = 1，次数 / 机制 = 2） | 是 | — | 否 |
 | `mechanic_mod` | enum | `MM_*`（§2.1 枚举，**共 28 项**）；**机制类节点用它**，与 `effect_key` **互斥** | 条件必填 | — | 否 |
 | `mechanic_param` | int | 0–100，含义随 `mechanic_mod` 定（见 §2.1 末列） | 条件必填 | — | 否 |
 | `prereq_closure` | string[] | — | **禁手填** | — | 是：`prereq_ids` 传递闭包（DFS，去重） |
@@ -76,6 +77,8 @@
 | `node_id` | string | `md_*` | 是 | — | 否 |
 | `pos_x` / `pos_y` | int ×2 | [-12,12]；**网状布局坐标**（枢纽在原点，分支中环，叶外环），**锚点布局用，不是像素坐标** | 是 | — | 否 |
 | `prereq_ids` | string[] | 0–3 项；**枢纽 = 3 分支 id**、分支 = 空、叶 = 对应分支 id | 是（可空数组） | `meridian.node_id` | 否 |
+| `node_role` | enum | `branch`分支 / `leaf`叶 / `hub`枢纽（**手填**；C6 复算消耗的角色系数输入：1 / 3 / 9） | 是 | — | 否 |
+| `leaf_order` | int | 1–8（**手填**；叶序系数 = 同一分支下的第 k 个叶 = k。破脉·省 = 1、破脉·连 = 2） | 是 | — | 否 |
 | `mechanic_mod` | enum | **A35 枚举内的 `MM_*`**（见 §2.1） | 否 | — | 否 |
 | `mechanic_param` | int | 0–100（含义随 `mechanic_mod` 定，见 §2.1 枚举表末列） | 否 | — | 否 |
 | `stat_key` / `stat_value` | string / float | **恒为空**。依 v3.0 §4.1「络脉只改机制、不加战力」+ §4.8.3，本表 8 行**全部是机制类**，数值列一律不填；保留两列只为表结构统一，**导表器对这两列做"必须为空"校验** | **恒空** | — | 否 |
@@ -151,20 +154,20 @@
 
 > `cost_eu` 数值写在**本表**（数据层唯一真值源）；推导式（公式与系数）在 [IMPL-v3.0.md §4.8.2](./IMPL-v3.0.md#482-星盘-12-节点4-系--3链式前置同系相邻连携-8-条)，校验判据 C1–C7 在 [`docs/design/progression-node-cost-rules.md`](../design/progression-node-cost-rules.md)。**三处各管一件事，数值不复制。**
 
-| `node_id` | 节点 | `series` | `pos_x`,`pos_y` | `prereq_ids` | `unlock_tier` | `cost_eu` | 效果承载 | 参数 | 类型 |
+| `node_id` | 节点 | `series` | `pos_x`,`pos_y` | `prereq_ids` | `unlock_tier` | `cost_eu` | 效果承载 | 参数 | 类型（`node_type`） |
 |---|---|---|---|---|---|---|---|---|---|
-| `sn_blade_1` | 连击 | blade | -9, 6 | — | 1 | 2 | `eff_combo_2hit_stack` | 1 | 离散 |
-| `sn_blade_2` | 转破势 | blade | -9, 0 | `sn_blade_1` | 2 | 12 | `MM_STAR_BREAKSTATE` | 1 | 机制 |
-| `sn_blade_3` | 锋尽 | blade | -9, -6 | `sn_blade_2` | 3 | 36 | `eff_channel_extra_settle` | 1 | 次数 |
-| `sn_blood_1` | 回偿 | blood | -3, 6 | — | 1 | 2 | `eff_hitstun_stack_refund` | 1 | 离散 |
-| `sn_blood_2` | 盾解 | blood | -3, 0 | `sn_blood_1` | 2 | 12 | `MM_STAR_SHIELD_BREAK_FIRST` | 1 | 机制 |
-| `sn_blood_3` | 代偿 | blood | -3, -6 | `sn_blood_2` | 3 | 36 | `MM_STAR_LIFESTEAL_CONTINUE` | 1 | 机制 |
-| `sn_speed_1` | 先手 | speed | 3, 6 | — | 1 | 2 | `eff_perfect_dodge_stack` | 2 | 离散 |
-| `sn_speed_2` | 续 | speed | 3, 0 | `sn_speed_1` | 2 | 6 | `eff_cancel_window_frames` | 6 | 帧 |
-| `sn_speed_3` | 连 | speed | 3, -6 | `sn_speed_2` | 3 | 36 | `MM_STAR_CHANNEL_MOVE` | 1 | 机制 |
-| `sn_momentum_1` | 聚 | momentum | 9, 6 | — | 1 | 2 | `eff_channel_stack_per_settle` | 1 | 离散 |
-| `sn_momentum_2` | 溢 | momentum | 9, 0 | `sn_momentum_1` | 2 | 12 | `MM_STAR_OVERCAP_TO_DAMAGE` | 3 | 机制 |
-| `sn_momentum_3` | 轮 | momentum | 9, -6 | `sn_momentum_2` | 3 | 36 | `MM_STAR_CANCEL_ALL_AFTER_N` | 3 | 机制 |
+| `sn_blade_1` | 连击 | blade | -9, 6 | — | 1 | 2 | `eff_combo_2hit_stack` | 1 | `discrete` |
+| `sn_blade_2` | 转破势 | blade | -9, 0 | `sn_blade_1` | 2 | 12 | `MM_STAR_BREAKSTATE` | 1 | `mechanic` |
+| `sn_blade_3` | 锋尽 | blade | -9, -6 | `sn_blade_2` | 3 | 36 | `eff_channel_extra_settle` | 1 | `count` |
+| `sn_blood_1` | 回偿 | blood | -3, 6 | — | 1 | 2 | `eff_hitstun_stack_refund` | 1 | `discrete` |
+| `sn_blood_2` | 盾解 | blood | -3, 0 | `sn_blood_1` | 2 | 12 | `MM_STAR_SHIELD_BREAK_FIRST` | 1 | `mechanic` |
+| `sn_blood_3` | 代偿 | blood | -3, -6 | `sn_blood_2` | 3 | 36 | `MM_STAR_LIFESTEAL_CONTINUE` | 1 | `mechanic` |
+| `sn_speed_1` | 先手 | speed | 3, 6 | — | 1 | 2 | `eff_perfect_dodge_stack` | 2 | `discrete` |
+| `sn_speed_2` | 续 | speed | 3, 0 | `sn_speed_1` | 2 | 6 | `eff_cancel_window_frames` | 6 | `frame` |
+| `sn_speed_3` | 连 | speed | 3, -6 | `sn_speed_2` | 3 | 36 | `MM_STAR_CHANNEL_MOVE` | 1 | `mechanic` |
+| `sn_momentum_1` | 聚 | momentum | 9, 6 | — | 1 | 2 | `eff_channel_stack_per_settle` | 1 | `discrete` |
+| `sn_momentum_2` | 溢 | momentum | 9, 0 | `sn_momentum_1` | 2 | 12 | `MM_STAR_OVERCAP_TO_DAMAGE` | 3 | `mechanic` |
+| `sn_momentum_3` | 轮 | momentum | 9, -6 | `sn_momentum_2` | 3 | 36 | `MM_STAR_CANCEL_ALL_AFTER_N` | 3 | `mechanic` |
 
 > **`sn_blade_2` 的节点名保持「转破势」**：IMPL-v3.0.md §4.5.2 立了「破势（目标状态）」与「破势回锋（位移变体）」**一名两义**的硬约束，`MM_STAR_BREAKSTATE` 的枚举含义也是「进入**破势**」（敌人身上的状态）。节点若改称「转破势回锋」会把两义混成义，故数据层按枚举含义落名；节点 id `sn_blade_2` 不受影响。
 
@@ -185,16 +188,16 @@
 
 > `cost_eu` 数值写在**本表**（数据层唯一真值源）；推导式在 [IMPL-v3.0.md §4.8.3](./IMPL-v3.0.md#483-络脉-8-节点1-枢纽--3-分支--4-叶全部为机制类不加战力)，判据 C1–C7 在 [`docs/design/progression-node-cost-rules.md`](../design/progression-node-cost-rules.md)。
 
-| `node_id` | 节点 | 位置 | `prereq_ids` | `cost_eu` | `mechanic_mod` | `mechanic_param` | 效果 |
-|---|---|---|---|---|---|---|---|
-| `md_guan` | 贯（枢纽） | 0, 0 | `md_fengmai`, `md_shimai`, `md_pomai` | 27 | `MM_MER_CONDUCE_SKILL` | 150（cm = 1.5m） | 锋域在场时，服务技能的增益可**传导**给锋域边缘 1.5m 内的敌人 |
-| `md_fengmai` | 锋脉（分支） | -4, 3 | — | 3 | `MM_MER_CONDUCE_RANGE` | 300（cm = 3.0m） | 传导范围 1.5m → 3m |
-| `md_fengmai_xu` | 锋脉·续（叶） | -7, 5 | `md_fengmai` | 9 | `MM_ATK_NO_INTERRUPT_IN_DOMAIN` | 0 | 锋域内普攻不中断（v3.0 §5 交叉表已登记） |
-| `md_shimai` | 势脉（分支） | 4, 3 | — | 3 | `MM_MER_CONDUCE_STACK` | 1 | 传导对象由增益改为**层数** |
-| `md_shimai_fan` | 势脉·返（叶） | 7, 5 | `md_shimai` | 9 | `MM_MER_STACK_REFUND` | 1 | 被传导层数的敌人死亡时返还 1 层锋芒 |
-| `md_pomai` | 破脉（分支） | 0, -4 | — | 3 | `MM_MER_CONDUCE_FINISH` | 150（cm = 1.5m） | 破锋的引爆可传导给锋域边缘的敌人 |
-| `md_pomai_sheng` | 破脉·省（叶） | -3, -7 | `md_pomai` | 9 | `MM_FINISH_COST_MINUS1` | 1 | 破锋消耗层数可减为 2 层（与词条 / 技传多来源时**取最小值**，A39） |
-| `md_pomai_lian` | 破脉·连（叶） | 3, -7 | `md_pomai` | 18 | `MM_MER_FINISH_CHAIN` | 1 | 引爆可连锁传导给第二个目标 |
+| `node_id` | 节点 | 位置 | `prereq_ids` | `cost_eu` | `node_role` | `leaf_order` | `mechanic_mod` | `mechanic_param` | 效果 |
+|---|---|---|---|---|---|---|---|---|---|
+| `md_guan` | 贯（枢纽） | 0, 0 | `md_fengmai`, `md_shimai`, `md_pomai` | 27 | `hub` | 1 | `MM_MER_CONDUCE_SKILL` | 150（cm = 1.5m） | 锋域在场时，服务技能的增益可**传导**给锋域边缘 1.5m 内的敌人 |
+| `md_fengmai` | 锋脉（分支） | -4, 3 | — | 3 | `branch` | 1 | `MM_MER_CONDUCE_RANGE` | 300（cm = 3.0m） | 传导范围 1.5m → 3m |
+| `md_fengmai_xu` | 锋脉·续（叶） | -7, 5 | `md_fengmai` | 9 | `leaf` | 1 | `MM_ATK_NO_INTERRUPT_IN_DOMAIN` | 0 | 锋域内普攻不中断（v3.0 §5 交叉表已登记） |
+| `md_shimai` | 势脉（分支） | 4, 3 | — | 3 | `branch` | 1 | `MM_MER_CONDUCE_STACK` | 1 | 传导对象由增益改为**层数** |
+| `md_shimai_fan` | 势脉·返（叶） | 7, 5 | `md_shimai` | 9 | `leaf` | 1 | `MM_MER_STACK_REFUND` | 1 | 被传导层数的敌人死亡时返还 1 层锋芒 |
+| `md_pomai` | 破脉（分支） | 0, -4 | — | 3 | `branch` | 1 | `MM_MER_CONDUCE_FINISH` | 150（cm = 1.5m） | 破锋的引爆可传导给锋域边缘的敌人 |
+| `md_pomai_sheng` | 破脉·省（叶） | -3, -7 | `md_pomai` | 9 | `leaf` | 1 | `MM_FINISH_COST_MINUS1` | 1 | 破锋消耗层数可减为 2 层（与词条 / 技传多来源时**取最小值**，A39） |
+| `md_pomai_lian` | 破脉·连（叶） | 3, -7 | `md_pomai` | 18 | `leaf` | 2 | `MM_MER_FINISH_CHAIN` | 1 | 引爆可连锁传导给第二个目标 |
 
 > **`cost_eu` 口径（已定稿）**：星盘与络脉的消耗**已由设计线补齐**（数值在本表，推导式在 IMPL，判据 C1–C7 在规则文件）。**导表器对这两表启用消耗值校验**：值域 C1 / C2、同系严格递增 C3、同分支严格递增 C4、拓扑序 C5、**按推导式复算全部 20 行 C6（手填值与重算值不等即 error）**。两表**加战力 = 0**，`cost_eu` **不进 A38**（C7）。
 

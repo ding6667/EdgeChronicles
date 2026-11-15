@@ -323,11 +323,8 @@ def check_costs(report, tables):
         list_ = sorted(list_, key=lambda r: r["unlock_tier"])
         for i, row in enumerate(list_):
             level_factor = [1, 3, 9][i] if i < 3 else 9
-            type_factor = 2 if row.get("mechanic_mod") else 1
-            if not row.get("mechanic_mod") and row.get("effect_key"):
-                for _, hints in [STAR_TYPE_FACTOR_HINT]:
-                    if any(h in row["effect_key"] for h in hints):
-                        type_factor = 2
+            node_type = row.get("node_type")
+            type_factor = 2 if node_type in ("count", "mechanic") else 1
             expected = 2 * level_factor * type_factor
             report.check(row["cost_eu"] == expected, "C6",
                         "star_node %s 按推导式重算 = 2×%d×%d = %d，表中 %d"
@@ -335,21 +332,18 @@ def check_costs(report, tables):
 
     # C4 络脉同分支递增 + C6 络脉复算：3 × 角色系数(分支 1/叶 3/枢纽 9) × 叶序系数
     mer = {r["node_id"]: r for r in tables.get("meridian", [])}
-    leaf_order = defaultdict(int)
-    for row in tables.get("meridian", []):
-        for pre in row.get("prereq_ids") or []:
-            leaf_order[pre] += 1
 
     for row in tables.get("meridian", []):
         pres = row.get("prereq_ids") or []
-        role = 9 if len(pres) >= 3 else (3 if len(pres) == 1 else 1)
-        leaf = 1
-        for pre in pres:
-            leaf = max(leaf, leaf_order.get(pre, 1))
-        expected = 3 * role * leaf
+        role_factor = {"hub": 9, "leaf": 3, "branch": 1}.get(row.get("node_role"))
+        if role_factor is None:
+            report.fail("C6", "meridian %s 的 node_role 必须落值（branch / leaf / hub）" % row["node_id"])
+            continue
+        leaf_factor = row.get("leaf_order", 1) or 1
+        expected = 3 * role_factor * leaf_factor
         report.check(row["cost_eu"] == expected, "C6",
                     "meridian %s 按推导式重算 = 3×%d×%d = %d，表中 %d"
-                    % (row["node_id"], role, leaf, expected, row["cost_eu"]))
+                    % (row["node_id"], role_factor, leaf_factor, expected, row["cost_eu"]))
         for pre in pres:
             if pre in mer:
                 report.check(row["cost_eu"] > mer[pre]["cost_eu"], "C4",

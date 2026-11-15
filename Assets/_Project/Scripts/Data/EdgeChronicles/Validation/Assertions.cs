@@ -1648,31 +1648,25 @@ namespace EdgeChronicles.Data.Validation
             var meridians = set.Get("meridian");
             if (meridians == null) return Missing(set, report, "meridian");
 
-            var leafOrder = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var bound in meridians.Rows)
-            {
-                var row = bound.As<MeridianRow>();
-                if (row?.prereq_ids == null) continue;
-                foreach (var prereqId in row.prereq_ids)
-                {
-                    int order = leafOrder.TryGetValue(prereqId, out int existing) ? existing + 1 : 1;
-                    leafOrder[prereqId] = order;
-                }
-            }
-
             foreach (var bound in meridians.Rows)
             {
                 var row = bound.As<MeridianRow>();
                 if (row == null) continue;
                 checkedRows++;
 
-                int roleFactor = row.prereq_ids != null && row.prereq_ids.Length >= 3 ? 9
-                    : (row.prereq_ids != null && row.prereq_ids.Length == 1 ? 3 : 1);
-                int leafFactor = 1;
-                foreach (var prereqId in row.prereq_ids ?? new string[0])
+                // 角色系数：分支 1 / 叶 3 / 枢纽 9；叶序系数：同一分支下的第 k 个叶 = k。
+                // 两者都是**手填列**（node_role / leaf_order）：按 id 排序反推叶序会与设计线定的顺序不一致。
+                int roleFactor;
+                switch (row.node_role)
                 {
-                    if (leafOrder.TryGetValue(prereqId, out int order) && order > leafFactor) leafFactor = order;
+                    case "hub": roleFactor = 9; break;
+                    case "leaf": roleFactor = 3; break;
+                    case "branch": roleFactor = 1; break;
+                    default:
+                        report.Error("C6", "meridian", row.node_id, "node_role", "node_role 必须落值（branch / leaf / hub）");
+                        continue;
                 }
+                int leafFactor = row.leaf_order > 0 ? row.leaf_order : 1;
                 int expected = 3 * roleFactor * leafFactor;
 
                 if (row.cost_eu != expected)
@@ -1691,18 +1685,26 @@ namespace EdgeChronicles.Data.Validation
             return 9;
         }
 
+        /// <summary>
+        /// 星盘类型系数：次数类与机制类 = 2；离散类与帧类 = 1。
+        /// <para>
+        /// 类型取自表内手填列 <c>node_type</c>（离散 / 次数 / 帧 / 机制），
+        /// **不靠效果键字符串反推**——反推等于把设计内容藏进命名里，换个键名就静默算错。
+        /// </para>
+        /// </summary>
         private static int StarTypeFactor(StarNodeRow row)
         {
-            if (!string.IsNullOrEmpty(row.mechanic_mod)) return 2;   // 机制类
-            // 次数类与机制类系数 2；离散 / 帧类系数 1。
-            // 次数类由效果键承载（eff_channel_extra_settle / eff_channel_stack_per_settle）。
-            if (row.effect_key != null &&
-                (row.effect_key.IndexOf("extra_settle", StringComparison.Ordinal) >= 0 ||
-                 row.effect_key.IndexOf("stack_per_settle", StringComparison.Ordinal) >= 0))
+            switch (row.node_type)
             {
-                return 2;
+                case "count":
+                case "mechanic":
+                    return 2;
+                case "discrete":
+                case "frame":
+                    return 1;
+                default:
+                    return 1;
             }
-            return 1;
         }
 
         /// <summary>C7：星盘 / 络脉的 cost_eu 不进战力公式。</summary>
