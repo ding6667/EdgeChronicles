@@ -1,0 +1,156 @@
+# EdgeChronicles · 资产 Gate 工作流
+#
+# 判据（全部可脚本判定，无人工确认项）：
+#   G1 Build Settings 里至少有一个启用的场景
+#   G2 美术资产命名：UI_ICON_ / UI_PANEL_ / VFX_
+#   G3 贴图尺寸与压缩：母版 1024×1024、切片最大边 ≤128、不超过档位上限、不得未压缩
+#   G4 模型材质槽 ≤ 5
+#   G5 .unity / .prefab 不得是 Git LFS 指针
+#   G6 .meta 配对完整（无孤立 meta、无缺 meta）
+#   G7 Player Settings 的 bundleVersion 与仓库 VERSION 一致
+#   G8 仓库内不存在密钥文件（.env / *.key / *.keystore / *.p12 / *.ulf 等）
+#   G9 LFS 二进制资产已落地（不是指针）
+#   附加：出包前工作树必须干净（严格模式下）
+#
+# 通过判据：Tools/build/lint-assets.sh 退出码 0，且日志中没有任何 "[LINT] FAIL"。
+
+name: lint
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  asset-gate:
+    name: 资产 Gate
+    runs-on: ${{ fromJSON(vars.UNITY_RUNNER_LABELS || '["self-hosted","windows"]') }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: 准备工具
+        run: |
+          set -euo pipefail
+          if [ -z "${UNITY_PATH:-}" ] || [ ! -f "$UNITY_PATH" ]; then
+            echo "::error::仓库变量 UNITY_PATH 未设置或指向的文件不存在"
+            exit 3
+          fi
+          want="$(sed -n 's/^m_EditorVersion:[[:space:]]*//p' ProjectSettings/ProjectVersion.txt | head -1)"
+          echo "工程要求 Unity: $want"
+
+      - name: 激活 Unity 许可证
+        run: |
+          set -euo pipefail
+          if [ -n "${UNITY_LICENSE:-}" ]; then
+            mkdir -p "/c/ProgramData/Unity"
+            printf '%s' "$UNITY_LICENSE" > "/c/ProgramData/Unity/Unity_lic.ulf"
+          elif [ -n "${UNITY_EMAIL:-}" ] && [ -n "${UNITY_PASSWORD:-}" ]; then
+            "$UNITY_PATH" -batchmode -nographics -quit \
+              -serial "${UNITY_SERIAL:-}" -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" || true
+          else
+            echo "::error::没有可用的 Unity 许可证来源"
+            exit 3
+          fi
+
+      - name: 仓库卫生检查（不依赖 Unity 的部分）
+        run: |
+          set -uo pipefail
+          rc=0
+
+          # G5：.unity / .prefab 不得是 LFS 指针
+          pointers="$(git grep -Il '' -- '*.unity' '*.prefab' 2>/dev/null \
+            | while IFS= read -r f; do
+                head -c 64 "$f" 2>/dev/null | grep -q 'git-lfs.github.com/spec/v1' && echo "$f"
+              done || true)"
+          if [ -n "$pointers" ]; then
+            echo "::error::以下 .unity/.prefab 是 LFS 指针（UnityYAMLMerge 无法合并）："
+            echo "$pointers"
+            rc=7
+          else
+            echo "G5 ok：.unity/.prefab 保持文本"
+          fi
+
+          # G8：仓库内不得有密钥文件
+          secrets="$(git ls-files | grep -Ei '(^|/)\.env($|\.)|\.(key|keystore|p12|pfx|pem|jks|ulf)$' || true)"
+          if [ -n "$secrets" ]; then
+            echo "::error::仓库内存在疑似密钥文件（密钥只允许走 CI secret）："
+            echo "$secrets"
+            rc=7
+          else
+            echo "G8 ok：仓库内无密钥文件"
+          fi
+
+          # G7：VERSION 格式
+          if [ ! -f VERSION ]; then
+            echo "::error::缺少 VERSION 文件"
+            rc=7
+          else
+            v="$(tr -d ' \t\r\n' < VERSION)"
+            if ! printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+              echo "::error::VERSION 格式不合规: $v"
+              rc=7
+            else
+              echo "G7-1 ok：VERSION = $v"
+            fi
+          fi
+
+          # 附加：PR 上工作树必须干净
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            status="$(git status --porcelain --untracked-files=all)"
+            if [ -n "$status" ]; then
+              echo "::error::PR 工作树不干净："
+              echo "$status"
+              rc=7
+            else
+              echo "工作树干净"
+            fi
+          fi
+
+          exit $rc
+
+      - name: 资产 Gate（Unity 侧）
+        run: |
+          set -uo pipefail
+          bash Tools/build/lint-assets.sh --tier low --version "$(tr -d ' \t\r\n' < VERSION)"
+          rc=$?
+          echo "lint-assets 退出码: $rc"
+          exit $rc
+
+      - name: 汇总
+        if: always()
+        run: |
+          set -uo pipefail
+          {
+            echo "## 资产 Gate"
+            echo ""
+            if [ -f Logs/lint-assets.log ]; then
+              grep -E '^\[LINT\]' Logs/lint-assets.log || true
+            else
+              echo "未生成 Gate 日志"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传 Gate 日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-log-${{ github.run_id }}
+          path: Logs/lint-assets.log
+          retention-days: 14
+          if-no-files-found: ignore

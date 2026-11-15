@@ -1,0 +1,141 @@
+# EdgeChronicles · 测试工作流
+#
+# 调 Tools/ci/check-*.sh（工程线所有，测试侧只调用不改）。
+# 判据全部可脚本判定：
+#   - check-compile          退出码 0，日志无 "error CS"
+#   - check-data             退出码 0（或明确 data-skip）
+#   - check-progression      日志含 "ProgressionAudit: tables=20 orphans=0 derivedOverwritten=100%"
+#   - check-tests            results.xml 中 failed="0" 且 passed>0
+#   - check-tests-playmode   results-playmode.xml 中 failed="0" 且 passed>0
+#   - 任何一项失败 → 整条流水线红，且失败项名写进 job summary
+#
+# 运行机器：自托管 Windows + Unity 2022.3.62f3c1（中国版 LTS）。
+# 许可证只走仓库 secret，不入库。
+
+name: test
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: '2022.3.62f3c1'
+
+jobs:
+  unit-and-integration:
+    name: EditMode + PlayMode + 数据自证
+    runs-on: ${{ fromJSON(vars.UNITY_RUNNER_LABELS || '["self-hosted","windows"]') }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: 准备工具
+        run: |
+          set -euo pipefail
+          if [ -z "${UNITY_PATH:-}" ] || [ ! -f "$UNITY_PATH" ]; then
+            echo "::error::仓库变量 UNITY_PATH 未设置或指向的文件不存在"
+            exit 3
+          fi
+          want="$(sed -n 's/^m_EditorVersion:[[:space:]]*//p' ProjectSettings/ProjectVersion.txt | head -1)"
+          echo "工程要求 Unity: $want"
+
+      - name: 激活 Unity 许可证
+        run: |
+          set -euo pipefail
+          if [ -n "${UNITY_LICENSE:-}" ]; then
+            mkdir -p "/c/ProgramData/Unity"
+            printf '%s' "$UNITY_LICENSE" > "/c/ProgramData/Unity/Unity_lic.ulf"
+          elif [ -n "${UNITY_EMAIL:-}" ] && [ -n "${UNITY_PASSWORD:-}" ]; then
+            "$UNITY_PATH" -batchmode -nographics -quit \
+              -serial "${UNITY_SERIAL:-}" -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" || true
+          else
+            echo "::error::没有可用的 Unity 许可证来源"
+            exit 3
+          fi
+
+      - name: 编译自证
+        run: |
+          set -uo pipefail
+          bash Tools/ci/check-compile.sh
+          rc=$?
+          echo "check-compile 退出码: $rc"
+          exit $rc
+
+      - name: 配表结构自证
+        run: |
+          set -uo pipefail
+          bash Tools/ci/check-data.sh
+          rc=$?
+          echo "check-data 退出码: $rc"
+          exit $rc
+
+      - name: 养成数据完整性自证
+        run: |
+          set -uo pipefail
+          bash Tools/ci/check-progression.sh
+          rc=$?
+          echo "check-progression 退出码: $rc"
+          exit $rc
+
+      - name: EditMode 测试
+        run: |
+          set -uo pipefail
+          bash Tools/ci/check-tests.sh
+          rc=$?
+          echo "check-tests 退出码: $rc"
+          exit $rc
+
+      - name: PlayMode 联动测试
+        run: |
+          set -uo pipefail
+          bash Tools/ci/check-tests-playmode.sh
+          rc=$?
+          echo "check-tests-playmode 退出码: $rc"
+          exit $rc
+
+      - name: 汇总结果
+        if: always()
+        run: |
+          set -uo pipefail
+          {
+            echo "## 测试结果"
+            echo ""
+            echo "| 检查 | 结果 |"
+            echo "|---|---|"
+            for f in Tools/ci/results.xml Tools/ci/results-playmode.xml; do
+              if [ -f "$f" ]; then
+                passed=$(grep -o 'result="Passed"' "$f" | wc -l | tr -d ' ')
+                failed=$(grep -o 'result="Failed"' "$f" | wc -l | tr -d ' ')
+                echo "| $f | 通过 $passed / 失败 $failed |"
+              else
+                echo "| $f | 未生成 |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            Tools/ci/results*.xml
+            Tools/ci/*.log
+          retention-days: 14
+          if-no-files-found: ignore

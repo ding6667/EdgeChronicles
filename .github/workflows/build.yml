@@ -1,0 +1,183 @@
+# EdgeChronicles · 出包工作流
+#
+# 目标：把「能出包」这件事变成可重复、可判定的流水线。
+#
+# 判据（全部可脚本判定，无人工确认项）：
+#   - Unity 批处理编译退出码 0，日志无 "error CS"
+#   - 出包脚本退出码 0
+#   - 玩家包存在（EdgeChronicles.exe + EdgeChronicles_Data/）
+#   - build-manifest.json 存在，且 payload.sha256 可复算一致
+#   - 产物逐文件 sha256 与 manifest 一致
+#   - 包体不超过档位 limits.buildSizeMB
+#   - 出包后工作树无新增污染（git status 与出包前一致）
+#
+# 运行机器：自托管 Windows + Unity 2022.3.62f3c1（中国版 LTS）。
+#   仓库变量 UNITY_PATH 指向 Unity.exe；仓库变量 UNITY_RUNNER_LABELS 指定 runner 标签。
+#   许可证：只用仓库 secret（UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD / UNITY_SERIAL），
+#   任何密钥都不入库。
+#
+# 分发档位：PR 上出开发包（非严格门控），打 tag 时出正式包（严格门控）。
+
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: '机型档位 low|medium|high'
+        required: true
+        default: low
+      backend:
+        description: '脚本后端 il2cpp|mono'
+        required: true
+        default: il2cpp
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UNITY_VERSION: '2022.3.62f3c1'
+
+jobs:
+  package:
+    name: 出包 · ${{ inputs.tier || 'low' }} · ${{ inputs.backend || 'il2cpp' }}
+    # 自托管 Windows runner：Unity 中国版 LTS 不在 GitHub 托管镜像的预装列表里。
+    runs-on: ${{ fromJSON(vars.UNITY_RUNNER_LABELS || '["self-hosted","windows"]') }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: 准备工具
+        run: |
+          set -euo pipefail
+          echo "UNITY_PATH=${UNITY_PATH:-未设置}"
+          if [ -z "${UNITY_PATH:-}" ]; then
+            echo "::error::仓库变量 UNITY_PATH 未设置（应指向 Unity.exe）"
+            exit 3
+          fi
+          if [ ! -f "$UNITY_PATH" ]; then
+            echo "::error::UNITY_PATH 指向的文件不存在: $UNITY_PATH"
+            exit 3
+          fi
+          # 判据：Unity 版本与 ProjectSettings/ProjectVersion.txt 一致
+          want="$(sed -n 's/^m_EditorVersion:[[:space:]]*//p' ProjectSettings/ProjectVersion.txt | head -1)"
+          have="$(cat "$(dirname "$UNITY_PATH")/../Unity.version" 2>/dev/null | head -1 || true)"
+          if [ -z "$have" ]; then
+            have="$("$UNITY_PATH" -version 2>/dev/null | head -1 | awk '{print $NF}' || true)"
+          fi
+          echo "工程要求 Unity: $want / runner 上的 Unity: $have"
+          if [ -n "$have" ] && [ "$want" != "$have" ]; then
+            echo "::error::Unity 版本不符：工程要求 $want，runner 上是 $have"
+            exit 3
+          fi
+
+      - name: 激活 Unity 许可证
+        run: |
+          set -euo pipefail
+          if [ -n "${UNITY_LICENSE:-}" ]; then
+            # Unity Personal/Plus 的 .ulf 许可证内容，只来自 secret
+            mkdir -p "/c/ProgramData/Unity"
+            printf '%s' "$UNITY_LICENSE" > "/c/ProgramData/Unity/Unity_lic.ulf"
+            echo "已写入 ULF 许可证"
+          elif [ -n "${UNITY_EMAIL:-}" ] && [ -n "${UNITY_PASSWORD:-}" ]; then
+            "$UNITY_PATH" -batchmode -nographics -quit \
+              -serial "${UNITY_SERIAL:-}" \
+              -username "$UNITY_EMAIL" -password "$UNITY_PASSWORD" || true
+            echo "已用账号方式尝试激活"
+          else
+            echo "::error::没有可用的 Unity 许可证来源：需要 secret UNITY_LICENSE，或 UNITY_EMAIL + UNITY_PASSWORD"
+            exit 3
+          fi
+
+      - name: 编译自证
+        run: |
+          set -uo pipefail
+          bash Tools/ci/check-compile.sh
+          rc=$?
+          echo "check-compile 退出码: $rc"
+          exit $rc
+
+      - name: 出包
+        env:
+          TIER: ${{ inputs.tier || 'low' }}
+          BACKEND: ${{ inputs.backend || 'il2cpp' }}
+        run: |
+          set -uo pipefail
+          STRICT="--non-strict"
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            STRICT=""
+            echo "打 tag 出包：启用严格门控"
+          else
+            echo "分支/PR 出包：非严格门控（开发包）"
+          fi
+          bash Tools/build/build-player.sh \
+            --tier "$TIER" --backend "$BACKEND" --target win64 \
+            --output "$GITHUB_WORKSPACE/Build/$TIER-$BACKEND-win64" \
+            $STRICT
+          rc=$?
+          echo "build-player 退出码: $rc"
+          exit $rc
+
+      - name: 产物校验
+        run: |
+          set -uo pipefail
+          DIR="$GITHUB_WORKSPACE/Build/${{ inputs.tier || 'low' }}-${{ inputs.backend || 'il2cpp' }}-win64"
+          # 判据 1：玩家包存在
+          test -f "$DIR/EdgeChronicles.exe" || { echo "::error::缺少玩家包"; exit 5; }
+          test -d "$DIR/EdgeChronicles_Data" || { echo "::error::缺少 EdgeChronicles_Data"; exit 5; }
+          # 判据 2：manifest 存在
+          test -f "$DIR/build-manifest.json" || { echo "::error::缺少 build-manifest.json"; exit 5; }
+          # 判据 3：逐文件校验和与根校验和一致
+          bash Tools/build/verify-artifact.sh "$DIR" || { echo "::error::产物校验失败"; exit 6; }
+          # 判据 4：包体不超过档位上限
+          SIZE_MB=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['payload']['sizeMB'])" "$DIR/build-manifest.json")
+          LIMIT=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['limits']['buildSizeMB'])" "Tools/build/baselines/${{ inputs.tier || 'low' }}.json")
+          echo "包体 ${SIZE_MB} MB / 档位上限 ${LIMIT} MB"
+          python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) <= float(sys.argv[2]) else 1)" "$SIZE_MB" "$LIMIT" \
+            || { echo "::error::包体超过档位上限"; exit 5; }
+          echo "$SIZE_MB" > "$DIR/package-size-mb.txt"
+
+      - name: 工作树未被构建污染
+        run: |
+          set -uo pipefail
+          # 判据：出包后除产物目录外没有新增改动（构建脚本会还原它临时改过的工程设置）
+          status="$(git status --porcelain --untracked-files=all | grep -v '^?? Build/' || true)"
+          if [ -n "$status" ]; then
+            echo "::error::出包后工作树出现改动："
+            echo "$status"
+            exit 10
+          fi
+          echo "工作树干净"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: edgechronicles-${{ inputs.tier || 'low' }}-${{ inputs.backend || 'il2cpp' }}-win64
+          path: Build/${{ inputs.tier || 'low' }}-${{ inputs.backend || 'il2cpp' }}-win64
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: 上传出包日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.run_id }}
+          path: |
+            Build/**/unity-build.log
+            Logs/**/*.log
+          retention-days: 7
+          if-no-files-found: ignore

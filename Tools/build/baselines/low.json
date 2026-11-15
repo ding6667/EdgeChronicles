@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "id": "low",
+  "displayName": "低档 · 集显轻薄本（验收底线）",
+  "role": "acceptance-floor",
+  "notes": "本档是《拾锋录》的验收底线：集显轻薄本在 1080p 下必须稳定 30fps。任何档位若低于本档参数即视为越过验收底线。本档所有档位判定以本档为准。",
+  "hardware": {
+    "gpu": "Intel Iris Xe 集显（核显，无独显）",
+    "cpu": "酷睿 i5-1135G7 / 锐龙 5500U 级",
+    "ramGB": 8,
+    "display": "1920x1080 60Hz",
+    "storage": "SSD",
+    "thermal": "轻薄本常规散热（非主动风扇或单风扇）"
+  },
+  "target": {
+    "resolution": [1920, 1080],
+    "renderScale": 1.0,
+    "targetFrameRate": 30,
+    "vsync": false,
+    "fullscreenMode": "FullScreenWindow",
+    "resizableWindow": false,
+    "runInBackground": false,
+    "fieldOfView": 60
+  },
+  "quality": {
+    "unityQualityLevel": "Very Low",
+    "msaa": 1,
+    "fxaa": true,
+    "postProcessing": false,
+    "hdr": false,
+    "shadows": {
+      "enabled": false,
+      "resolution": 512,
+      "cascades": 1,
+      "distance": 15
+    },
+    "additionalLights": {
+      "perObject": false,
+      "perPixel": false,
+      "maxCount": 0
+    },
+    "lodBias": 0.7,
+    "maximumLODLevel": 2,
+    "anisotropicFiltering": 1,
+    "masterTextureLimit": 1,
+    "textureMipmapLimit": 2,
+    "softParticles": false,
+    "realtimeReflectionProbes": false,
+    "realtimeLightProbes": false,
+    "asyncUploadTimeSlice": 2,
+    "asyncUploadBufferSize": 4
+  },
+  "particles": {
+    "maxParticles": 200,
+    "trails": false,
+    "softParticles": false,
+    "collision": false,
+    "lights": false,
+    "meshParticles": false,
+    "subEmitters": 0
+  },
+  "textures": {
+    "maxTextureSize": 1024,
+    "compression": "DXT",
+    "compressionQuality": 40,
+    "mipmaps": true,
+    "streamingMipmaps": true,
+    "streamingMemoryMB": 256,
+    "crunched": false,
+    "uiIcons": {
+      "masterSize": [1024, 1024],
+      "sliceSize": [128, 128],
+      "compression": "DXT5",
+      "alphaIsTransparency": true
+    }
+  },
+  "memory": {
+    "workingSetMB": 1536,
+    "textureMemoryMB": 256,
+    "meshMemoryMB": 96,
+    "audioMemoryMB": 48,
+    "gcHeapMB": 96,
+    "graphicsBufferMB": 128
+  },
+  "limits": {
+    "drawCalls": 800,
+    "triangles": 300000,
+    "batches": 900,
+    "buildSizeMB": 2048,
+    "bootSeconds": 12,
+    "sceneLoadSeconds": 4
+  },
+  "scripting": {
+    "backend": "il2cpp",
+    "managedStrippingLevel": "Low",
+    "incrementalGC": true,
+    "stripEngineCode": true,
+    "apiCompatibilityLevel": "NET_Standard_2_0",
+    "il2cppCompilerConfiguration": "Release"
+  },
+  "acceptance": {
+    "minFps": 30,
+    "p95FrameTimeMs": 33.4,
+    "maxLongFrameMs": 50,
+    "maxLongFrameRatio": 0.01,
+    "frameTimeSampleSeconds": 120,
+    "sampleScene": "副本全程 + Boss 三阶段"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "id": "medium",
+  "displayName": "中档 · 入门独显 / 高配集显",
+  "role": "default",
+  "notes": "默认发行档位。面向主流轻薄本与入门桌面机，1080p 稳定 60fps。低档为验收底线，高档为上限参照，三档的参数差异只允许沿『分辨率→阴影→后期→粒子→贴图→内存』单向递增，不得反向缩水。",
+  "hardware": {
+    "gpu": "GTX 1650 / Iris Xe 锐酷 Xe / RX 5500T 级",
+    "cpu": "酷睿 i5-12400P / 锐龙 5 5600H 级",
+    "ramGB": 16,
+    "display": "1920x1080 144Hz",
+    "storage": "SSD",
+    "thermal": "双风扇或单风扇厚机"
+  },
+  "target": {
+    "resolution": [1920, 1080],
+    "renderScale": 1.0,
+    "targetFrameRate": 60,
+    "vsync": false,
+    "fullscreenMode": "FullScreenWindow",
+    "resizableWindow": false,
+    "runInBackground": false,
+    "fieldOfView": 60
+  },
+  "quality": {
+    "unityQualityLevel": "Low",
+    "msaa": 1,
+    "fxaa": true,
+    "postProcessing": true,
+    "postFx": {
+      "bloom": false,
+      "vignette": true,
+      "tonemapping": "ACES",
+      "filmGrain": false,
+      "chromaticAberration": false
+    },
+    "hdr": false,
+    "shadows": {
+      "enabled": true,
+      "resolution": 1024,
+      "cascades": 1,
+      "distance": 30
+    },
+    "additionalLights": {
+      "perObject": true,
+      "perPixel": true,
+      "maxCount": 4
+    },
+    "lodBias": 1.0,
+    "maximumLODLevel": 3,
+    "anisotropicFiltering": 4,
+    "masterTextureLimit": 0,
+    "textureMipmapLimit": 0,
+    "softParticles": true,
+    "realtimeReflectionProbes": false,
+    "realtimeLightProbes": true,
+    "asyncUploadTimeSlice": 4,
+    "asyncUploadBufferSize": 8
+  },
+  "particles": {
+    "maxParticles": 500,
+    "trails": false,
+    "softParticles": true,
+    "collision": false,
+    "lights": false,
+    "meshParticles": false,
+    "subEmitters": 1
+  },
+  "textures": {
+    "maxTextureSize": 2048,
+    "compression": "DXT",
+    "compressionQuality": 60,
+    "mipmaps": true,
+    "streamingMipmaps": true,
+    "streamingMemoryMB": 512,
+    "crunched": false,
+    "uiIcons": {
+      "masterSize": [1024, 1024],
+      "sliceSize": [128, 128],
+      "compression": "DXT5",
+      "alphaIsTransparency": true
+    }
+  },
+  "memory": {
+    "workingSetMB": 3072,
+    "textureMemoryMB": 512,
+    "meshMemoryMB": 160,
+    "audioMemoryMB": 64,
+    "gcHeapMB": 128,
+    "graphicsBufferMB": 256
+  },
+  "limits": {
+    "drawCalls": 1200,
+    "triangles": 600000,
+    "batches": 1400,
+    "buildSizeMB": 3072,
+    "bootSeconds": 8,
+    "sceneLoadSeconds": 3
+  },
+  "scripting": {
+    "backend": "il2cpp",
+    "managedStrippingLevel": "Medium",
+    "incrementalGC": true,
+    "stripEngineCode": true,
+    "apiCompatibilityLevel": "NET_Standard_2_0",
+    "il2cppCompilerConfiguration": "Release"
+  },
+  "acceptance": {
+    "minFps": 60,
+    "p95FrameTimeMs": 16.7,
+    "maxLongFrameMs": 33.4,
+    "maxLongFrameRatio": 0.01,
+    "frameTimeSampleSeconds": 120,
+    "sampleScene": "副本全程 + Boss 三阶段"
+  }
+}
