@@ -210,6 +210,85 @@ def check_banned(path, problems):
                     problems.append("%s:%d 出现禁止词「%s」" % (path, idx, w))
 
 
+
+def check_initializers(root, problems):
+    """L7：对象初始化器里赋值的成员必须真实存在于目标类。
+
+    【为什么需要】并发编辑时最容易出的错就是"改了字段名、另一处还在用旧名"，
+    或者"往记录里加了一个字段、但字段声明没加" —— 编译器会报，但**报得很晚**。
+    这里按"类声明里有哪些 public 字段"直接核对一遍。
+    """
+    # 收集本工程自己声明的类 → 字段集合
+    classes = {}
+    decl = re.compile(r'public\s+(?:sealed\s+|static\s+|abstract\s+|readonly\s+|partial\s+)*(?:class|struct)\s+(\w+)')
+    field = re.compile(r'public\s+(?:readonly\s+|const\s+|static\s+|new\s+)*[\w<>\[\],\.\?]+\s+(\w+)\s*(?:=|;|\{)')
+    for path in iter_cs_files(root):
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
+        for m in decl.finditer(src):
+            name = m.group(1)
+            body = src[m.end():]
+            depth = 0
+            started = False
+            cut = len(body)
+            for i, ch in enumerate(body):
+                if ch == "{":
+                    depth += 1
+                    started = True
+                elif ch == "}":
+                    depth -= 1
+                    if started and depth <= 0:
+                        cut = i
+                        break
+            classes.setdefault(name, set()).update(field.findall(body[:cut]))
+
+    # 核对 `new <类名> { A = ..., B = ... }`
+    new_re = re.compile(r'new\s+(\w+)\s*\{')
+    assign = re.compile(r'(?:^|[{,;])\s*(\w+)\s*=')
+    for path in iter_cs_files(root):
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
+        for m in new_re.finditer(src):
+            cls = m.group(1)
+            if cls not in classes:
+                continue
+            start_brace = m.end() - 1
+            depth = 0
+            names = []
+            i = start_brace
+            in_str = False
+            while i < len(src):
+                c = src[i]
+                if in_str:
+                    if c == "\\":
+                        i += 2
+                        continue
+                    if c == '"':
+                        in_str = False
+                    i += 1
+                    continue
+                if c == '"':
+                    in_str = True
+                    i += 1
+                    continue
+                if c == "{":
+                    depth += 1
+                elif c == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                elif c in "{,;":
+                    mm = assign.match(src, i + 1)
+                    if mm:
+                        names.append(mm.group(1))
+                i += 1
+            lineno = src.count("\n", 0, m.start()) + 1
+            for nm in names:
+                if nm not in classes[cls]:
+                    problems.append("%s:%d `new %s { ... %s = ... }` —— %s 不是 %s 的字段（字段声明缺失或名字写错）"
+                                    % (path, lineno, cls, nm, nm, cls))
+
+
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
     problems = []
@@ -219,6 +298,7 @@ def main():
         check_commas(p, problems)
         check_encoding(p, problems)
         check_banned(p, problems)
+    check_initializers(root, problems)
 
     mirror = os.path.join(root, "docs", "qa", "qa_oracle_mirror.py")
     if os.path.exists(mirror):

@@ -77,20 +77,20 @@ namespace EdgeChronicles.Tests.Criteria
         [Test]
         public void GDD已有编号_映射列与走查项一一对应且不冲突()
         {
-            // LegacyDocId 允许多条走查判据映射到同一个 GDD 编号（D2 同时管方向 / 距离 / 不推入墙），
+            // CanonicalId 允许多条走查判据映射到同一个 GDD 编号（D2 同时管方向 / 距离 / 不推入墙），
             // 但不允许两条**不同**的 GDD 编号映射到同一条走查判据。
             var map = new Dictionary<string, string>(StringComparer.Ordinal);
             var problems = new List<string>();
             for (int i = 0; i < CriterionCatalog.Walkthrough.Count; i++)
             {
                 CriterionRecord c = CriterionCatalog.Walkthrough[i];
-                if (string.IsNullOrEmpty(c.LegacyDocId)) { continue; }
+                if (string.IsNullOrEmpty(c.CanonicalId)) { continue; }
                 string existing;
-                if (map.TryGetValue(c.Id, out existing) && existing != c.LegacyDocId)
+                if (map.TryGetValue(c.Id, out existing) && existing != c.CanonicalId)
                 {
-                    problems.Add(c.Id + " 同时映射到 " + existing + " 与 " + c.LegacyDocId);
+                    problems.Add(c.Id + " 同时映射到 " + existing + " 与 " + c.CanonicalId);
                 }
-                map[c.Id] = c.LegacyDocId;
+                map[c.Id] = c.CanonicalId;
             }
             Assert.IsEmpty(problems, "GDD 编号映射冲突：\n" + string.Join("\n", problems.ToArray()));
 
@@ -99,13 +99,15 @@ namespace EdgeChronicles.Tests.Criteria
             for (int i = 0; i < CriterionCatalog.Walkthrough.Count; i++)
             {
                 CriterionRecord c = CriterionCatalog.Walkthrough[i];
-                if (string.IsNullOrEmpty(c.LegacyDocId)) { continue; }
+                if (string.IsNullOrEmpty(c.CanonicalId)) { continue; }
                 List<string> lst;
-                if (!byLegacy.TryGetValue(c.LegacyDocId, out lst)) { lst = new List<string>(); byLegacy[c.LegacyDocId] = lst; }
+                if (!byLegacy.TryGetValue(c.CanonicalId, out lst)) { lst = new List<string>(); byLegacy[c.CanonicalId] = lst; }
                 lst.Add(c.Id);
             }
             Assert.IsTrue(byLegacy.ContainsKey("C2"), "闪避无敌（WC-02）应映射到 GDD 的 C2。");
             Assert.IsTrue(byLegacy.ContainsKey("E3"), "输入延迟（WC-16）应映射到 GDD 的 E3。");
+            Assert.IsFalse(byLegacy.ContainsKey("E3") && byLegacy["E3"].Contains("WC-22"),
+                "E3 是输入延迟，不该同时映射到受击动画变体（WC-22）——那会把两条无关判据绑在一起。");
         }
     }
 }

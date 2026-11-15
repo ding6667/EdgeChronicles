@@ -278,6 +278,19 @@ def evaluate(s):
         if i>0 and (dg["cp"]<=dl[i-1]["cp"] or dg["cp"]<dl[i-1]["cp"]*C["CpMinRatio"]-1e-4): add("F-EDGE-LEVELS")
     return fired
 
+def kb(s, tier):
+    return [k for k in s["kbs"] if k["tier"] == tier][0]
+
+
+def asset(s, vid):
+    return [a for a in s["vfxassets"] if a["id"] == vid][0]
+
+
+def syn_hold(k):
+    """hold 是派生列：改了输入就要同步声明值，否则会额外触发 F-HOLD 的「禁手填」检查。"""
+    k["declared_hold"] = computed_hold(k)
+
+
 def inject(cid, s):
     if cid=="NC-A01": s["dodge"]["start"]=0; s["dodge"]["end"]=0
     elif cid=="NC-A02": s["feedback"]=5

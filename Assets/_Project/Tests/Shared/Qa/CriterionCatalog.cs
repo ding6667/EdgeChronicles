@@ -32,7 +32,7 @@ namespace EdgeChronicles.Tests.Qa
         // 【正本】本文件（CriterionCatalog.cs）就是判据编号的唯一真值源。
         // GDD §10.1 / §12 / §13 与 IMPL §7 一律改为**引用这里的 id**，不再各自编号。
         // 【GDD 已有 ID】设计线裁定"正本编号沿用 GDD 已有 ID"，
-        // 因此每条记录额外保留 <see cref="CriterionRecord.LegacyDocId"/> 映射列
+        // 因此每条记录额外保留 <see cref="CriterionRecord.CanonicalId"/> 映射列
         // （C1 / C2 / D1a / D1b / D1b-obs / D2 / D4 / D5 / B1 / B2 / B3 / E2 / E3），
         // 供 GDD / IMPL 改成引用时一一对回。
         //   · A2 / A4 在 GDD §10.1 W4 被提到（"A2/A4/C2/D1a 自动判定"），
@@ -365,7 +365,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-17（AnimationClip 采样：变体齐备性 + 脚底接触点高度序列）",
                 FalsePositiveCondition = "脚底接触点的取法必须写死（本判据取绑定骨架最低顶点到根骨平面的距离）；若取「包围盒底面」，脚部 IK 造成的包围盒抖动会让连续帧全部判为离地 >3cm，从而把好变体误判为不稳。",
                 SourceRef = "GDD-v1.0.md §7.3 受击变体；GDD-v0.1.md §9",
-                CanonicalId = "E3",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitClipVariants },
                 Veto = false
             }
