@@ -106,8 +106,8 @@ def main():
 
 | # | 遗留 | 卡在哪 | 下一步 | 谁 |
 |---|---|---|---|---|
-| 1 | **全仓真编译未拿到实据** | Unity Editor 关着；沙箱禁止任何 C# 编译器（未绕过） | 开 Editor 跑 MCP `hasErrors` 探针，或跑工程侧的编译自证脚本 | release-ops-lead |
-| 2 | 工程线 6 处编译错误 | 全在工程线自己未写完的导表断言文件里 | 清零后重跑 #1 | engineering-lead |
+| 1 | **全仓真编译未拿到实据** | QA 侧无可用编译器（沙箱禁止调用，未绕过）；Unity Editor 关着 | 明早跑 `rm -f Temp/UnityLockfile && bash Tools/ci/check-compile.sh` 取「全仓 0 error」实据 | release-ops-lead |
+| 2 | 工程线 6 处编译错误 | 已清零：工程侧把全工程编译跑到只剩 QA 侧一处（集合元素漏逗号），该处已修 | 直接重跑 #1 | engineering-lead → release-ops-lead |
 | 3 | 7 条生产契约未落地 | `TableValidator` / `SkillRuntime` / `MovementCurveEvaluator` / `HitGeometry` / `CombatTuning` / `BossRuleEvaluator` / `SaveCodec` 尚不存在 | 按 `QA-v1.0-测试规范.md` §3 落名（改签名只改 `ProductionContracts.cs` 一处） | engineering-lead |
 | 4 | EL-03 断言层 6 处口径 | A33 ② / A33-2 / A33-3 / A33-5 / A39「络脉 +1」/ `tech_skill` 残留 | **已提级为工程线阻塞项**；口径定了之后我再对齐判据描述（**现在不猜着改**） | engineering-lead → design-strategist → QA |
 | 5 | 曲线 `value` 的 schema 注释 | D-13 已落「逐帧速度 m/s」 | 按 m/s 改注释与派生列算法 | engineering-lead |
@@ -115,7 +115,7 @@ def main():
 | 7 | `Vec2` 定点精度 | D-11 已落 1/1000 m | `UnitsPerMeter` 100 改 1000 | engineering-lead |
 | 8 | 12 条人眼项的实测结论 | 需要录屏与盲测人力 | Gate 时由 QA 组织，结论以带协议编号的录屏归档 | QA（Gate 时） |
 | 9 | A2 / A4 的正本编号 | GDD §10.1 原句引用了**四份文档里都不存在的编号**（悬空引用） | **已闭合**：策划已把 GDD §10.1 W2 改为「C2/D1a 自动判定」，不编造 A2/A4 定义；QA 映射表保持留空 | design-strategist（已改）→ QA（已留空） |
-| 10 | `docs/impl/TOOLCHAIN.md` 用 **A2 / A4** 指 Unity Hub 的版本 / 模块 | 与判据域的 A2/A4 **撞号**（IMPL §7「编号域声明」要防的那类问题） | 改成 V2 / V4 之类；或声明 TOOLCHAIN 的编号域独立 | release-ops-lead / team-lead（design-strategist 转来） |
+| 10 | `docs/impl/TOOLCHAIN.md` 的工具清单编号与判据域撞号 | 原用 A1–A11（含 A2 / A4 指 Unity Hub 版本 / 模块） | **已闭合**：主理人已把工具清单改为 **T1–T11**，判据域的 A 留给导表断言与走查 / 用例编号；顺带把 H 组版本锁定表对齐实装（URP 17→14 等）并修掉「建议下限、未实测」与「✅ 已装」自相矛盾的表述 | team-lead（已改） |
 | 11 | D-09 A29 的模拟序列 | 「连段模拟」没定义序列与时间步长 | **已闭合**：判据侧固定标准连段序列（熟练链为主序列 / 新手链为最小序列）+ 60Hz 步长 + 600 帧 + 顿帧帧也要跑；生产侧用自己的序列时须记录种子与帧数、可回放。负向注入 S-16 已加 | design-strategist（已裁）→ QA（已落） |
 
 ---

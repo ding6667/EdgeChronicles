@@ -218,7 +218,7 @@ namespace EdgeChronicles.Tests.Contracts
 
         private static void CheckTier(MethodInfo spec, object tuning, string tier, int hitstun, int hitstop, float distMin, float distMax)
         {
-            object[] arr = spec.Invoke(tuning, new object[] { tier }) as float[];
+            float[] arr = spec.Invoke(tuning, new object[] { tier }) as float[];
             Assert.IsNotNull(arr, "GetKnockbackSpec(\"" + tier + "\") 返回 null。");
             Assert.AreEqual(5, arr.Length, "GetKnockbackSpec 应返回 { hitstun, hold, hitstop, distMin, distMax } 共 5 个值。");
             Assert.AreEqual(hitstun, (int)arr[0], tier + " 档硬直帧数不符。");

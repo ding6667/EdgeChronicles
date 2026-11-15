@@ -321,6 +321,59 @@ def check_initializers(root, problems):
                                     % (path, lineno, cls, nm, nm, cls))
 
 
+
+def check_qualified_constants(root, problems):
+    """L8：跨类引用的常量必须带类名限定。
+
+    【为什么需要】同命名空间 ≠ 同类成员可见。
+    本工程踩过一次：`CriterionCatalog.cs` 里裸写 `A24` / `A30` / `A33`，
+    编译器报「The name 'A24' does not exist」——而这些常量就在**同一个命名空间**里，
+    看上去毫无异常，实则必须写成 `CriterionOracle.A24`。
+
+    连带的一类：带连字符的编号（`A33-1`）不是合法标识符，
+    编译器会把它解析成 `A33` 减 `1`。编号是**数据**，标识符是**代码**，
+    带连字符的编号只能通过常量承载（`A331`），字符串值只出现在常量定义处。
+    """
+    import collections
+    consts = collections.defaultdict(set)
+    file_classes = {}
+    for path in iter_cs_files(root):
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
+        cur = None
+        for ln in src.split("\n"):
+            mc = re.search(r"(?:class|struct|enum)\s+(\w+)", ln)
+            if mc:
+                cur = mc.group(1)
+                file_classes.setdefault(path, set()).add(cur)
+            mq = re.search(r"public const string (\w+)", ln)
+            if mq and cur:
+                consts[mq.group(1)].add(cur)
+
+    names = set(consts)
+    for path in iter_cs_files(root):
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
+        code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', src)   # 去掉字符串字面量
+        for i, ln in enumerate(code.split("\n"), 1):
+            if "public const string" in ln:
+                continue
+            # ① 跨类裸引用
+            for m in re.finditer(r"(?<![.\w])([A-Z]\w*[A-Z]\w*)\b", ln):
+                n = m.group(1)
+                if n not in names:
+                    continue
+                if consts[n] & file_classes.get(path, set()):
+                    continue
+                problems.append("%s:%d 常量 %s 跨类裸引用（属 %s）——同命名空间不等于同类成员可见，必须写 %s.%s"
+                                % (path, i, n, "/".join(sorted(consts[n])),
+                                   sorted(consts[n])[0], n))
+            # ② 带连字符的编号被当成标识符
+            for m in re.finditer(r"\{[^}]*\bA\d+-\d+[^}]*\}", ln):
+                problems.append("%s:%d 标识符里带连字符的编号：%s —— 编号是数据、标识符是代码，"
+                                "应改用合法常量（如 CriterionOracle.A331）" % (path, i, m.group(0)[:50]))
+
+
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
     problems = []

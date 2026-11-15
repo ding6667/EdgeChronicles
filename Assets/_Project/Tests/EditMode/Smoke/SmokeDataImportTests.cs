@@ -53,7 +53,7 @@ namespace EdgeChronicles.Tests.Smoke
             {
                 CriterionOracle.A31, CriterionOracle.A33, CriterionOracle.A331, CriterionOracle.A332,
                 CriterionOracle.A333, CriterionOracle.A334, CriterionOracle.A335, CriterionOracle.A35,
-                CriterionOracle.A39, CriterionOracle.A40, CriterionOracle.A43
+                CriterionOracle.A391, CriterionOracle.A392, CriterionOracle.A40, CriterionOracle.A43
             };
             for (int i = 0; i < required.Length; i++)
             {

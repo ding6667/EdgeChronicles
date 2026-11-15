@@ -135,6 +135,29 @@ namespace EdgeChronicles.Data
             return s_specs[index];
         }
 
+        /// <summary>
+        /// 取某机制项的参数，并按其单位换算成 UI 展示用的量。
+        /// <para>
+        /// 参数单位随 id 定（EL-03 §2.1 末列）：层 / 次 / 帧 / % / <b>cm</b> / 倍率。
+        /// 半径类是<b>厘米</b>，换算成米时走 <see cref="UnitBridge"/>——换算系数只在 Core 定义一次。
+        /// </para>
+        /// </summary>
+        public static float ParameterInDisplayUnits(MechanicMod mod, int parameter)
+        {
+            var spec = Get(mod);
+            switch (spec.ParamUnit)
+            {
+                case MechanicParamUnit.Centimeters:
+                    return UnitBridge.CentimetersToMeters(parameter);
+                case MechanicParamUnit.Multiplier:
+                    return parameter / 100f;   // 200 = ×2.00 → 显示 2.00
+                case MechanicParamUnit.Percent:
+                    return parameter / 100f;   // 3 = 3% → 显示 0.03
+                default:
+                    return parameter;
+            }
+        }
+
         /// <summary>按 id 取枚举；不存在返回 false。</summary>
         public static bool TryParse(string id, out MechanicMod mod)
         {

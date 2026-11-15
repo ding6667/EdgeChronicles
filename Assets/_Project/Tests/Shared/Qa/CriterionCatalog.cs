@@ -62,7 +62,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "判据只量前 2 帧的位移占比。若实现把蹬地窗口定义为「前 2 帧内速度最大的一段」而不是「前 2 个逻辑帧」，同一段曲线会被判为违规——合法的「快速起步」设计会被误杀。此外总位移的取数口径（逻辑位移 vs 动画根位移）不一致时，占比会整体偏移。",
                 SourceRef = "GDD-v1.0.md §7.3 动画硬指标 ①",
                 CanonicalId = "C1",
-                RelatedAssertionIds = new List<string> { A24 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A24 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FDodgePush },
                 Veto = false,
             },
@@ -175,7 +175,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "硬直 18/20/22 是**名义值**还是「含 hold 的总时长」在文档中未统一；两种解释下同一实现的读数差 hold 段（3.3–3.9 帧）。判据必须声明读数口径（本判据取「从受击起始到可再次行动的总帧数」）。",
                 SourceRef = "GDD-v1.0.md §7.3；IMPL-v3.0.md §3.1；GDD-v1.0.md §9.4 导表硬断言 #11 #12",
                 CanonicalId = "D2",
-                RelatedAssertionIds = new List<string> { A30 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A30 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FHold, CriterionOracle.FHitstopCausal },
                 Veto = false,
             },
@@ -190,7 +190,7 @@ namespace EdgeChronicles.Tests.Qa
                 FalsePositiveCondition = "若实现把顿帧实现为 time_scale=0（完全冻结），本判据的数值部分仍能通过（0 ≤ 0.15），必须由人眼项补上「被顶开」这一半；而人眼项又依赖机位与慢放倍数写死，否则两人判定不一致。",
                 SourceRef = "GDD-v1.0.md §7.3 顿帧语义（D4）；IMPL-v2.0.md §7.1 歧义点 2",
                 CanonicalId = "D4",
-                RelatedAssertionIds = new List<string> { A30 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A30 },
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitstopCausal },
                 Veto = false,
             },
@@ -573,7 +573,7 @@ namespace EdgeChronicles.Tests.Qa
                 Expected = "判据必须报错：phases 各段 ≥1（A19 报红）。",
                 MeaningIfNotFired = "前摇为 0 的技能在数据层被放行 → 玩家没有任何可读的反应时间。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A19",
-                RelatedAssertionIds = new List<string> { A19 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A19 },
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord
@@ -583,7 +583,7 @@ namespace EdgeChronicles.Tests.Qa
                 Expected = "判据必须报错：hitShape.frame ≥ active（A20 报红）。",
                 MeaningIfNotFired = "判定帧落在 active 段之外 → 攻击要么永不生效，要么在错误时机生效；A20 已经「永远报绿」。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A20",
-                RelatedAssertionIds = new List<string> { A20 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A20 },
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord
@@ -593,7 +593,7 @@ namespace EdgeChronicles.Tests.Qa
                 Expected = "判据必须报错：allowTags 必须落在标签全集内 = 8 技能 entryTags ∪ {dodge, attack}（A22 报红）。",
                 MeaningIfNotFired = "引用了不存在的标签 → 取消窗口永远匹配不上，或被静默忽略，产生「看起来有窗口、实际取消不了」的死窗口。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A22；【D-10 裁定】标签全集 = 技能 entryTags ∪ 门派共有动作标签",
-                RelatedAssertionIds = new List<string> { A22 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A22 },
                 Channel = CriterionExecutability.AutoScript
             },
 
@@ -646,7 +646,7 @@ namespace EdgeChronicles.Tests.Qa
                 MeaningIfNotFired = "派生条目数被写死成 8 / 6 之后，任何新增派生都会被判为违规——而 §4.8.5 明确「不写死条数」。",
                 LegalDesignAtRisk = "**任何新增的技传派生条目（尤其是视觉层级为 generic / param 的那类）。** 派生清单是可以增长的；判据只能校验双向引用一致性，不能校验条数本身。",
                 SourceRef = "EL-03 §2 A33-1 / A33-5；IMPL-v3.0.md §4.8.5",
-                RelatedAssertionIds = new List<string> { A33-1 },
+                RelatedAssertionIds = new List<string> { CriterionOracle.A331 },
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord

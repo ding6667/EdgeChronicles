@@ -44,9 +44,9 @@ namespace EdgeChronicles.Tests.Qa
         public const string A29 = "A29"; // 连段模拟不产生负资源
         public const string A30 = "A30"; // hitstop ∈ [0.05, 0.25]
         public const string A31 = "A31"; // 星盘无环
-        public const string A33 = "A33"; // tier ↔ unlock_type 一一对应
+        public const string A33 = "A33"; // tier ↔ unlock_type 阶位不变量（每技能 5 阶覆盖 5 种类型各一次）
         public const string A331 = "A33-1"; // 派生条目双向承载
-        public const string A332 = "A33-2"; // 每技能至多 2 条派生，且 tier ∈ {3,5}
+        public const string A332 = "A33-2"; // 每技能至多 2 条派生，且 tier ∈ {1,2,3,5}
         public const string A333 = "A33-3"; // 裂石 / 回锋 派生列全空
         public const string A334 = "A33-4"; // derivative ∧ new_graphic ⇒ 必须有 id
         public const string A335 = "A33-5"; // new_graphic 行数 == 清单条数
