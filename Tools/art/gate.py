@@ -1669,9 +1669,53 @@ def _self_test():
         assert any(f.endswith("_fail.json") for f in wip_files), \
             "应生成 _fail.json，实际 %s" % wip_files
 
+        # 8) G12 静默失败点：Shader 已拷入工程但未收录 Always Included -> 必须失败
+        fake = scenario("s8")
+        sd = os.path.join(fake, "Assets", "_Project", "Art", "Shaders")
+        os.makedirs(sd)
+        os.makedirs(os.path.join(fake, "ProjectSettings"))
+        repo = repo_root_from_script()
+        for fname in ("GraphicsSettings.asset", "QualitySettings.asset"):
+            src = os.path.join(repo, "ProjectSettings", fname)
+            if os.path.isfile(src):
+                shutil.copy(src, os.path.join(fake, "ProjectSettings", fname))
+        guids = {}
+        for i, shname in enumerate(("ECOutlineMask.shader",
+                                    "ECOutlineDilate.shader",
+                                    "ECOutlineComposite.shader")):
+            src = os.path.join(repo, "Tools", "art", "shaders", shname)
+            if not os.path.isfile(src):
+                continue
+            shutil.copy(src, os.path.join(sd, shname))
+            guid = "%032x" % (0xABC00000 + i)
+            guids[shname] = guid
+            with open(os.path.join(sd, shname + ".meta"), "w",
+                      encoding="utf-8") as mf:
+                mf.write("fileFormatVersion: 2\nguid: %s\n" % guid)
+
+        pipe_problems, _pipe_warnings = check_pipeline_wiring(fake)
+        assert any(p["code"] == "G12-ALWAYS" for p in pipe_problems), \
+            "未收录 Always Included 时应报 G12-ALWAYS，实际 %s" % pipe_problems
+
+        gs = os.path.join(fake, "ProjectSettings", "GraphicsSettings.asset")
+        if os.path.isfile(gs) and guids:
+            with open(gs, "r", encoding="utf-8") as fh:
+                gtxt = fh.read()
+            marker = "  m_AlwaysIncludedShaders:\n"
+            entry = "".join("  - {fileID: 4800000, guid: %s, type: 3\n"
+                            % g for g in guids.values())
+            if marker in gtxt:
+                with open(gs, "w", encoding="utf-8") as fh:
+                    fh.write(gtxt.replace(marker, marker + entry, 1))
+                pipe_problems, _ = check_pipeline_wiring(fake)
+                assert not any(p["code"] == "G12-ALWAYS" for p in pipe_problems), \
+                    "已收录后不应再报 G12-ALWAYS"
+
         print("self-test OK：合规样本通过、违规样本失败、"
               "模型贴图无 alpha / UI 贴图必须有 alpha / 透明边框判定均生效、"
-              "图集格位与资源预算判定接入、失败资产退回 _WIP 并写 _fail.json")
+              "图集格位与资源预算判定接入、"
+              "Always Included Shaders 静默失败点可被抓出、"
+              "失败资产退回 _WIP 并写 _fail.json")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

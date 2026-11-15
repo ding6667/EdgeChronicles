@@ -85,6 +85,29 @@ namespace EdgeChronicles.Tests.Qa
     /// 一条判据（走查项）。字段全部必填——
     /// 缺 <see cref="FalsePositiveCondition"/> 的判据不予收录（GDD §12.1 判据四问 ③）。
     /// </summary>
+    /// <summary>
+    /// 判据目录的**三层算术**（裁定后写入代码，文档只引用这里，不复述数字）。
+    ///
+    /// | 层 | 数量 | 含义 | 关系 |
+    /// |---|---|---|---|
+    /// | 全量判据 | <see cref="TotalCriterionCount"/> | 所有可判定项（走查 + 导表断言 + 打击感判据） | — |
+    /// | **负向用例** | <see cref="NegativeCaseCount"/> | 属 A 类（灵敏度）/ B 类（特异性）的用例集 | ⊆ 全量判据 |
+    /// | **正向走查** | <see cref="WalkthroughCount"/> | 走查判据（人工 / 脚本走查项） | ⊆ 全量判据 |
+    ///
+    /// **负向用例与正向走查不相交**（30 ∩ 22 = ∅）：
+    /// 正向走查回答"要满足什么"，负向用例回答"注入错误后判据还报不报"。
+    /// 同一个编号不会既是走查项又是用例 id。
+    /// </summary>
+    public static class CriterionCounts
+    {
+        /// <summary>全量在册判据数（22 走查 + 47 断言 / 打击感判据 = 69）。</summary>
+        public const int TotalCriterionCount = 69;
+        /// <summary>负向用例数（24 A 类 + 6 B 类 = 30）。</summary>
+        public const int NegativeCaseCount = 30;
+        /// <summary>正向走查数（9 纯脚本 + 7 混合 + 6 必须人眼 = 22）。</summary>
+        public const int WalkthroughCount = 22;
+    }
+
     public sealed class CriterionRecord
     {
         /// <summary>判据编号。WC-xx = 走查判据；AX = 导表断言；FX = 打击感判据。</summary>
@@ -115,12 +138,29 @@ namespace EdgeChronicles.Tests.Qa
         /// <summary>豁免负向用例的理由（仅观察项填写）。</summary>
         public string NegativeCaseWaiver = "";
         /// <summary>
+        /// 正本编号（GDD / IMPL 里已有的判据 ID，如 C2、D1a、D2、B2、E3）。
+        /// 【口径】<see cref="Id"/> 是**内部稳定引用键**（用于负向用例、文档、日志的交叉引用），
+        /// 本字段是**对外正本编号**。两者都要留：正本编号会随规格改版变化，
+        /// 内部键不能跟着变（否则历史回归用例全部失效）。
+        /// 没有正本编号的填 "—"（表示该走查项在 GDD 里只有文字条款、尚未被编号）。
+        /// </summary>
+        public string CanonicalId = "—";
+        /// <summary>
         /// 对位断言（EL-03 §2 的 A19–A43）。
         /// 【为什么要有这一列】EL-03 §5 的 CI 判据矩阵已改为**引用式**：
         /// 判据逻辑的唯一真值源是 EL-03 §2。凡与 A19–A43 重叠的部分，这里只**引用编号**，
         /// 不重新定义判据——否则同一个数会有两个来源。没有对位断言的填空数组。
         /// </summary>
         public List<string> RelatedAssertionIds = new List<string>();
+        /// <summary>
+        /// GDD / IMPL 里已有的判据编号（如 C2、D1a、D1b、D2、D5、B1、B2、E3）。
+        /// 【为什么要保留这一列】设计线裁定「正本编号沿用 GDD 已有 ID，内部临时号映射后替换」；
+        /// 主理人裁定「CriterionCatalog.cs 就是编号的唯一真值源」。两条不冲突的正确做法是：
+        /// **代码目录是正本**，同时**把 GDD 已有编号作为映射列保留在同一条记录上**——
+        /// 这样 GDD / IMPL / 走查表三处只需改成引用本目录的 id，而不必各自再维护一套编号。
+        /// 没有 GDD 对应编号的填空串。
+        /// </summary>
+        public string LegacyDocId = "";
         /// <summary>
         /// 该判据是否**确实不涉及任何时钟轴**（纯数据层判据，如描边结构、材质槽数量）。
         /// 为 false 时，时钟轴必须显式声明 —— 这是"量纲 + 时钟轴"铁律的例外通道，

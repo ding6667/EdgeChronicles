@@ -27,6 +27,25 @@ namespace EdgeChronicles.Tests.Qa
     public static class CriterionCatalog
     {
         // ─────────────────────────────────────────────────────────────────
+        // 编号正本与三层算术
+        //
+        // 【正本】本文件（CriterionCatalog.cs）就是判据编号的唯一真值源。
+        // GDD §10.1 / §12 / §13 与 IMPL §7 一律改为**引用这里的 id**，不再各自编号。
+        // 【GDD 已有 ID】设计线裁定"正本编号沿用 GDD 已有 ID"，
+        // 因此每条记录额外保留 <see cref="CriterionRecord.LegacyDocId"/> 映射列
+        // （C1 / C2 / D1a / D1b / D1b-obs / D2 / D4 / D5 / B1 / B2 / B3 / E2 / E3），
+        // 供 GDD / IMPL 改成引用时一一对回。
+        //   · A2 / A4 在 GDD §10.1 W4 被提到（"A2/A4/C2/D1a 自动判定"），
+        //     但 **GDD 里没有它们的正文定义** → 暂留空，等正本补齐后再填。
+        //
+        // 【三层算术】数字写在代码里，文档只引用：
+        //   · 全量判据 69（在册）
+        //   ·   ├─ 负向用例 30（24 A 类 + 6 B 类）        ⊆ 全量判据
+        //   ·   └─ 正向走查 22（9 脚本 + 7 混合 + 6 人眼） ⊆ 全量判据
+        //   · 负向用例 ∩ 正向走查 = ∅（30 + 22 = 52 条用例与走查互不重叠）
+        // ─────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────
         // 22 条走查判据
         // ─────────────────────────────────────────────────────────────────
         public static readonly List<CriterionRecord> Walkthrough = new List<CriterionRecord>
@@ -41,7 +60,9 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-01（曲线前 2 帧积分 / 总积分）；人眼：HP-01（末帧-待机首帧姿势差，固定机位与慢放）",
                 FalsePositiveCondition = "判据只量前 2 帧的位移占比。若实现把蹬地窗口定义为「前 2 帧内速度最大的一段」而不是「前 2 个逻辑帧」，同一段曲线会被判为违规——合法的「快速起步」设计会被误杀。此外总位移的取数口径（逻辑位移 vs 动画根位移）不一致时，占比会整体偏移。",
                 SourceRef = "GDD-v1.0.md §7.3 动画硬指标 ①",
+                CanonicalId = "—",
                 RelatedAssertionIds = new List<string> { A24 },
+                LegacyDocId = "C1",
                 LinkedOracleIds = new List<string> { CriterionOracle.FDodgePush },
                 Veto = false,
             },
@@ -55,6 +76,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-02（窗口长度与位置，判据 F-DODGE-INVULN）+ PlayMode 无敌内不受伤；人眼：HP-02（对哑刀纵斩 10/10 成功）",
                 FalsePositiveCondition = "若某实现把「无敌」实现为「技能释放瞬间的一次免疫判定」而不是帧窗口，窗口长度会读成 0–1 帧，本判据会把它判为违规——而这可能是一个合法的防御性设计。反之，若实现允许多段无敌窗口，本判据只取第一段，漏判后面的窗口。",
                 SourceRef = "GDD-v1.0.md §7.2 / §7.3；IMPL-v2.0.md §9.4 导表硬断言 #2 #3",
+                CanonicalId = "C2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FDodgeInvuln },
                 Veto = true
             },
@@ -68,6 +90,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-03（时间戳差，逻辑时钟）",
                 FalsePositiveCondition = "若受击动画由「受击事件」触发而非「命中事件」触发，两者之间会插入一层表现层排队，合法实现可能被判成 4–5 帧。判据必须按事件时间戳而非帧号相减，且两个时间戳必须同源（见 E3 同源问题的同一条纪律）。",
                 SourceRef = "GDD-v1.0.md §1.2 P1；§10.1 W4（一票否决）",
+                CanonicalId = "D1a",
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitFeedback },
                 Veto = true
             },
@@ -81,6 +104,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-04（三档击退距离落区间，判据 F-KB-TIER）；人眼：HP-03（盲测：不给数值，测试者判断轻重）",
                 FalsePositiveCondition = "盲测里若测试者能从受击动画的力度感本身判断档位，则本判据测的是「动画表现」而非「12 帧内可读」；必须固定只播前 12 帧且不显示任何数值，否则结论不可复现。",
                 SourceRef = "GDD-v1.0.md §10.1 W4",
+                CanonicalId = "D1b",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbTier },
                 Veto = false,
             },
@@ -94,6 +118,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "HP-04（4 轴 × 5 次，固定 5m 正侧面机位）",
                 FalsePositiveCondition = "测试者若事先被告知方向，会按预期猜对；必须用打乱顺序的 20 段编号录屏，且不透露目标方向。斜向必须排除（45° 复合击退会被无动画变体直接判死，属判据量错对象）。",
                 SourceRef = "GDD-v1.0.md §10.1 W4（观察项）；§13 附注",
+                CanonicalId = "D1b-obs",
                 NegativeCaseWaiver = "观察项，不进验收：GDD 10.1 明确 4 正轴向方向可读只是观察项（斜向无动画变体，判据量错对象会误杀）。",
                 Veto = false,
             },
@@ -107,6 +132,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-05（击退向量 vs 伤害来源向量，取 8 向）",
                 FalsePositiveCondition = "取「8 向」时必须把斜向映射到最近的 45° 扇区；若攻击方与受击方存在高度差（俯视/仰角），向量在同一平面内的投影会偏，斜向用例可能落在错误的扇区边界上。判据必须先投影到逻辑平面再取扇区。",
                 SourceRef = "GDD-v1.0.md §7.3 硬判据；§10.1 W4（一票否决）",
+                CanonicalId = "D2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbDirection },
                 Veto = true
             },
@@ -120,6 +146,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-06（判据 F-KB-TIER）",
                 FalsePositiveCondition = "距离若按「位移曲线的积分」取，会包含顿帧期间被 time_scale 缩放的那一段，与「视觉上被顶开的距离」不是同一个量；两种取法在同一实现上能差 1–2 倍。判据必须声明取数口径（本判据取逻辑位移积分，含顿帧缩放）。",
                 SourceRef = "GDD-v1.0.md §7.3；IMPL-v3.0.md §3.2",
+                CanonicalId = "D2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbTier },
                 Veto = false,
             },
@@ -133,6 +160,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-07（场景查询，8 向 × 3 档）",
                 FalsePositiveCondition = "场景碰撞体是运行时生成还是关卡预置会改变查询结果；若判据在空场景（无碰撞体）下运行则永远通过。判据必须绑定到「真实关卡 + 预置碰撞体」，否则等于没测。",
                 SourceRef = "GDD-v1.0.md §7.3 D2 优先级",
+                CanonicalId = "D2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FKbWall },
                 Veto = false,
             },
@@ -146,7 +174,15 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-08（判据 F-HOLD + F-HITSTOP-CAUSAL）",
                 FalsePositiveCondition = "硬直 18/20/22 是**名义值**还是「含 hold 的总时长」在文档中未统一；两种解释下同一实现的读数差 hold 段（3.3–3.9 帧）。判据必须声明读数口径（本判据取「从受击起始到可再次行动的总帧数」）。",
                 SourceRef = "GDD-v1.0.md §7.3；IMPL-v3.0.md §3.1；GDD-v1.0.md §9.4 导表硬断言 #11 #12",
+                CanonicalId = "—",
                 RelatedAssertionIds = new List<string> { A30 },
+                LegacyDocId = "D2",
+                LegacyDocId = "D2",
+                LegacyDocId = "D2",
+                LegacyDocId = "D1b-obs",
+                LegacyDocId = "D1b",
+                LegacyDocId = "D1a",
+                LegacyDocId = "C2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FHold, CriterionOracle.FHitstopCausal },
                 Veto = false,
             },
@@ -160,7 +196,9 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-09（time_scale 采样 + PhaseFrame 连续性）；人眼：HP-05（固定机位慢放，判「卡住 + 被顶开」同时成立）",
                 FalsePositiveCondition = "若实现把顿帧实现为 time_scale=0（完全冻结），本判据的数值部分仍能通过（0 ≤ 0.15），必须由人眼项补上「被顶开」这一半；而人眼项又依赖机位与慢放倍数写死，否则两人判定不一致。",
                 SourceRef = "GDD-v1.0.md §7.3 顿帧语义（D4）；IMPL-v2.0.md §7.1 歧义点 2",
+                CanonicalId = "D4",
                 RelatedAssertionIds = new List<string> { A30 },
+                LegacyDocId = "D4",
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitstopCausal },
                 Veto = false,
             },
@@ -174,6 +212,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "数据前提由 SC-10 自动保证（判据 F-VFX-STRUCTURE）；可读性由 HP-07 的 B2 关键组判定",
                 FalsePositiveCondition = "本判据只比「结构」不不比「颜色」：如果实现用同一套描边结构 + 不同颜色来区分霸体与无敌，本判据会判为违规——而那正是 IMPL §3.4 明文禁止的做法（不得用颜色通道），因此该误杀是设计意图内的。真正的风险在反方向：若描边结构参数存在但运行时未生效，数据层通过而画面不变——需配合 WC-13 的盲测兜住。",
                 SourceRef = "IMPL-v3.0.md §3.4；GDD-v1.0.md §9.4 导表硬断言 #6",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FVfxStructure },
                 Veto = false,
                 AxisNotApplicable = true,
@@ -188,6 +227,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "HP-06（5 人 × 10 张，仅色差组）",
                 FalsePositiveCondition = "色差组若在显示器色准偏差的环境下录制，结论会随机器变化；必须记录显示器型号与色彩配置，且结论只用于定位、不作为 Gate。",
                 SourceRef = "GDD-v1.0.md §8.5 / §10.1",
+                CanonicalId = "B1",
                 NegativeCaseWaiver = "定位通道（B1 仅色差组）：按 GDD 10.1，其结果不达标不改方案，因此不配 Gate 级负向用例；采集规范由 NC-A12 的对照组协议覆盖。",
                 Veto = false,
                 AxisNotApplicable = true,
@@ -202,6 +242,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "HP-07（关键组盲测；对照组 D5 先跑）",
                 FalsePositiveCondition = "对照组若只消除颜色通道而保留描边形态与入窗时机，测试者会改用时序线索猜对，「通过」是伪的。必须先跑 D5 对照组并同时消除颜色 / 描边形态 / 入窗时机三个通道，否则本判据无效。",
                 SourceRef = "GDD-v1.0.md §8.5 / §10.1 / §12.1 规则 3",
+                CanonicalId = "B2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FD5Control },
                 Veto = true
             },
@@ -215,6 +256,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "HP-08（观察项记录）",
                 FalsePositiveCondition = "本项没有可写的误判条件——正因如此它只能是观察项。若有人把它升级为 Gate，必须先补上可量化的判据与阈值，否则就会变成「看谁嗓门大」。",
                 SourceRef = "GDD-v1.0.md §8.5 / §10.1",
+                CanonicalId = "B3",
                 NegativeCaseWaiver = "观察项（B3 相机跟随）：GDD 10.1 明确不毙 Gate、转后续修复处理，且本条写不出量化的误判条件。",
                 Veto = false,
                 AxisNotApplicable = true,
@@ -229,6 +271,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-11（预警数据帧数 ≥30 且形状为扇形）；人眼：HP-09（固定机位，判「能否读出范围」）",
                 FalsePositiveCondition = "预警帧数达标不等于可读：若预警形状是地面圆而实际攻击是扇形，玩家读到的是错的形状。判据必须同时校验「预警形状 = 实际判定形状」，否则会把「有预警」当成「预警正确」。",
                 SourceRef = "GDD-v1.0.md §7.3 / §8.5 / §9.4",
+                CanonicalId = "E2",
                 LinkedOracleIds = new List<string> { CriterionOracle.FBossTelegraph, CriterionOracle.FTelegraphChannels },
                 Veto = false,
             },
@@ -242,6 +285,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-12（判据 F-E3-LATENCY + F-E3-SAME-SOURCE）",
                 FalsePositiveCondition = "两个时间戳同源时差值恒为 0，判据永远通过——这是「最容易假通过的一条」。判据必须先证明两条管线非同源，再读差值；只读差值的实现等于没测。",
                 SourceRef = "GDD-v1.0.md §12.1 示例（E3）",
+                CanonicalId = "E3",
                 LinkedOracleIds = new List<string> { CriterionOracle.FE3Latency, CriterionOracle.FE3SameSource },
                 Veto = false,
             },
@@ -255,6 +299,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-13（命中帧截图像素占比，判据 F-BLADE-OCCLUSION）；人眼：HP-10（竖直面与离地）",
                 FalsePositiveCondition = "遮挡比必须是「被角色剪影遮挡的面积 / 刀光总面积」，不是「刀光占屏面积」——竖直刀光在俯视角下投影只有 0.5% 占屏，若量错对象会误杀全部竖直刀光（B-01 专测这一点）。像素分析必须固定命中判定帧，否则同一刀光不同帧的遮挡比差异可达 2 倍。",
                 SourceRef = "GDD-v1.0.md §7.2 / §12.1 ① / §12.3 错例 5",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FBladeOcclusion },
                 Veto = false,
             },
@@ -268,6 +313,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "HP-11（三通道逐条勾选）",
                 FalsePositiveCondition = "若某 Boss 的攻击本身没有落点（比如全身 AOE），「地面预警圈」这一通道物理上不存在，判据会把它判为违规。判据必须允许「全身 AOE 用全屏色调 + 音效」这一替代编码，并写明替代条件。",
                 SourceRef = "GDD-v1.0.md §8.5",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FTelegraphChannels },
                 Veto = false,
                 AxisNotApplicable = true,
@@ -282,6 +328,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "自动：SC-14（亮度差推导函数，5 档背景亮度 × 2 预设）；人眼：HP-12（3px 墨线实际观感）",
                 FalsePositiveCondition = "亮度差必须在**该副本的实拍背景**上取，而不是在纯色底或无背景的测试场景取；测试场景太干净会让「倒相」分支永远不触发，用例形同虚设。",
                 SourceRef = "GDD-v1.0.md §8.1 / §12.3 错例 4",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FInkContrast },
                 Veto = false,
                 AxisNotApplicable = true,
@@ -296,6 +343,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-15（材质扫描；asmdef 反向引用扫描见 ArchitectureTests）",
                 FalsePositiveCondition = "扫描必须覆盖所有已导入材质而不是只扫角色目录；只扫角色的实现会漏掉 VFX / 场景材质里的 AdditionalMaterial。另外「全局关闭 Clear Coat」若只在资产层检查，被运行时 Instantiate 的材质会绕过。",
                 SourceRef = "GDD-v1.0.md §9.6",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FVfxChannel },
                 Veto = false,
                 AxisNotApplicable = true,
@@ -310,6 +358,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-16（Prefab 检查：Collider 尺寸 / 视觉尺寸 比值）",
                 FalsePositiveCondition = "判据量的是「碰撞体尺寸 / 视觉尺寸」的比例，而不是绝对尺寸——若只查「Collider 尺寸 == 1.4 × 基础值」，遇到基础值本身有偏差的实现就会被误杀。",
                 SourceRef = "GDD-v1.0.md §7.4",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FEliteHitbox },
                 Veto = false,
                 AxisNotApplicable = true,
@@ -324,6 +373,7 @@ namespace EdgeChronicles.Tests.Qa
                 ExecutableAs = "SC-17（AnimationClip 采样：变体齐备性 + 脚底接触点高度序列）",
                 FalsePositiveCondition = "脚底接触点的取法必须写死（本判据取绑定骨架最低顶点到根骨平面的距离）；若取「包围盒底面」，脚部 IK 造成的包围盒抖动会让连续帧全部判为离地 >3cm，从而把好变体误判为不稳。",
                 SourceRef = "GDD-v1.0.md §7.3 受击变体；GDD-v0.1.md §9",
+                CanonicalId = "—",
                 LinkedOracleIds = new List<string> { CriterionOracle.FHitClipVariants },
                 Veto = false
             }
@@ -532,6 +582,12 @@ namespace EdgeChronicles.Tests.Qa
                 MeaningIfNotFired = "前摇为 0 的技能在数据层被放行 → 玩家没有任何可读的反应时间。",
                 SourceRef = "IMPL-v2.0.md §5 断言 A19",
                 RelatedAssertionIds = new List<string> { A19 },
+                LegacyDocId = "E3",
+                LegacyDocId = "E2",
+                LegacyDocId = "B3",
+                LegacyDocId = "B2",
+                LegacyDocId = "B1",
+                LegacyDocId = "D5",
                 Channel = CriterionExecutability.AutoScript
             },
             new NegativeCaseRecord
@@ -618,6 +674,32 @@ namespace EdgeChronicles.Tests.Qa
                 Channel = CriterionExecutability.AutoScript
             }
         };
+
+        /// <summary>
+        /// 判据目录的**三层关系**（D-06 裁定：代码即正本）。
+        ///
+        /// | 层 | 数量 | 含义 |
+        /// |---|---|---|
+        /// | 全量判据 | <see cref="AllCriterionIds"/> 的长度 | 所有可判定项（正向走查 + 导表断言 + 打击感判据） |
+        /// | **负向用例** | <see cref="NegativeCases"/> 的长度 = 30 | 其中 A 类（灵敏度）与 B 类（特异性）的子集；**30 与 22 不相交** |
+        /// | **正向走查** | <see cref="Walkthrough"/> 的长度 = 22 | 人工 / 脚本走查项（9 纯脚本 + 7 混合 + 6 必须人眼） |
+        ///
+        /// 推导关系：**30 属于全量判据**、**22 属于全量判据**、**30 与 22 不相交**。
+        /// 三条数字不是并列的三个总数，而是**同一本目录的三个切面**——写在这里就是为了防止它们各自漂移。
+        /// </summary>
+        /// <remarks>做成方法而不是静态字段：静态字段的初始化是**按文本顺序**的，
+        /// 若它排在 Walkthrough / NegativeCases 之前，取到的会是 null。</remarks>
+        public static string DescribeRelations()
+        {
+            int total = AllCriterionIds().Count;
+            int walk = Walkthrough.Count;
+            int neg = NegativeCases.Count;
+            return "全量判据 " + total + " 条（= " + walk + " 条正向走查 + "
+                + (total - walk) + " 条导表 / 养成 / 打击感判据）；"
+                + "负向用例 " + neg + " 条（24 A 类 + 6 B 类）；"
+                + "正向走查 " + walk + " 条（9 纯脚本 + 7 混合 + 6 必须人眼）。"
+                + "关系：负向用例与正向走查都从属于全量判据，且两者互不相交。";
+        }
 
         // ─────────────────────────────────────────────────────────────────
         // 查询

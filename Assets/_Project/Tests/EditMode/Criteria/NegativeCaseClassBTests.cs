@@ -50,19 +50,20 @@ namespace EdgeChronicles.Tests.Criteria
                     }
                     return;
 
-                case "NC-B05": // 在既有阶位上追加一个清单外的新派生 id（阶位行数不变）
+                case "NC-B05": // 在既有阶位上追加一个清单外的新派生条目（阶位行数不变）
                     {
-                        // 【D-03 裁定后】每技能恒为 5 阶 → **不能新增第 6 行**。
-                        // 合法的"新增派生"是：在某个既有阶位上挂一个新的派生 id
-                        // （该阶的派生效果类型所在处），并同步 skill.derivative_ids。
+                        // 【拆分模型】派生条目独立成表：**不新增阶位行**——
+                        // 新增阶位行会破坏"每技能 5 阶覆盖 5 种类型各一次"的不变量（A33），
+                        // 那是模型错误，不是"合法设计"。
+                        // 合法的"新增派生"是：在某个既有阶位上挂一个新的派生条目 id，
+                        // 并同步 skill.derivative_ids（A33-1 双向承载）。
                         // 阶位行数仍 5、new_graphic 条数仍 6、A43 配额不变。
-                        for (int i = 0; i < s.Derivatives.Count; i++)
-                        {
-                            if (s.Derivatives[i].SkillId == "sk_jufeng" && s.Derivatives[i].Tier == 3)
-                            {
-                                s.Derivatives[i].UnlockDerivativeId = "dv_jufeng_extra";
-                            }
-                        }
+                        var e = new QaDerivativeEffectRow();
+                        e.SkillId = "sk_jufeng";
+                        e.Tier = 3;
+                        e.DerivativeId = "dv_jufeng_extra";
+                        e.VisualTier = "generic";
+                        s.DerivativeEffects.Add(e);
                         for (int i = 0; i < s.Skills.Count; i++)
                         {
                             if (s.Skills[i].Id == "sk_jufeng") { s.Skills[i].DerivativeIds.Add("dv_jufeng_extra"); }
