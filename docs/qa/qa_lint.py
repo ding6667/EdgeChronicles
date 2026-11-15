@@ -389,10 +389,12 @@ def check_qualified_constants(root, problems):
         with open(path, encoding="utf-8") as f:
             src = f.read()
         cur = None
+        in_enum = False
         for ln in src.split("\n"):
             mc = re.search(r"(?:class|struct|enum)\s+(\w+)", ln)
             if mc:
                 cur = mc.group(1)
+                in_enum = ("enum " + cur) in ln
                 file_classes.setdefault(path, set()).add(cur)
             mq = re.search(r"public const string (\w+)", ln)
             if mq and cur:
@@ -416,6 +418,7 @@ def check_qualified_constants(root, problems):
                 problems.append("%s:%d 常量 %s 跨类裸引用（属 %s）——同命名空间不等于同类成员可见，必须写 %s.%s"
                                 % (path, i, n, "/".join(sorted(consts[n])),
                                    sorted(consts[n])[0], n))
+
             # ② 带连字符的编号被当成标识符
             for m in re.finditer(r"\{[^}]*\bA\d+-\d+[^}]*\}", ln):
                 problems.append("%s:%d 标识符里带连字符的编号：%s —— 编号是数据、标识符是代码，"

@@ -11,7 +11,7 @@ UNITY="$(resolve_unity)" || exit 2
 LOG="$ROOT/Tools/ci/check-data.log"
 echo "[CHECK] data 开始"
 "$UNITY" -batchmode -nographics -quit -projectPath "$ROOT" \
-  -executeMethod EdgeChronicles.Tools.Editor.Ci.ImportAndValidate -logFile "$LOG"
+  -executeMethod EdgeChronicles.Tools.Editor.Ci.ImportAndValidate.Run -logFile "$LOG"
 code=$?
 if grep -q "\[CHECK\] data-fail" "$LOG" 2>/dev/null; then
   grep "\[CHECK\]" "$LOG"; exit 1

@@ -474,7 +474,7 @@ UNITY="/e/UnityHub/2022.3.62f3c1/Editor/Unity.exe"   # 实测路径；解析逻�
 ```bash
 "$UNITY" -batchmode -nographics -quit \
   -projectPath "$PWD" \
-  -executeMethod EdgeChronicles.Tools.Editor.Ci.ImportAndValidate \
+  -executeMethod EdgeChronicles.Tools.Editor.Ci.ImportAndValidate.Run \
   -logFile "$PWD/.ci/import.log"
 # 判据：grep -q "ValidationSummary: error=0 warning=0" .ci/import.log
 ```
@@ -484,7 +484,7 @@ UNITY="/e/UnityHub/2022.3.62f3c1/Editor/Unity.exe"   # 实测路径；解析逻�
 ```bash
 "$UNITY" -batchmode -nographics -quit \
   -projectPath "$PWD" \
-  -executeMethod EdgeChronicles.Tools.Editor.Ci.ProgressionAudit \
+  -executeMethod EdgeChronicles.Tools.Editor.Ci.ProgressionAudit.Run \
   -logFile "$PWD/.ci/progression.log"
 # 判据：grep -q "ProgressionAudit: tables=20 orphans=0 derivedOverwritten=100%" .ci/progression.log
 ```

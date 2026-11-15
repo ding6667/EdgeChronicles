@@ -12,7 +12,7 @@ UNITY="$(resolve_unity)" || exit 2
 LOG="$ROOT/Tools/ci/check-progression.log"
 echo "[CHECK] progression 开始"
 "$UNITY" -batchmode -nographics -quit -projectPath "$ROOT" \
-  -executeMethod EdgeChronicles.Tools.Editor.Ci.ProgressionAudit -logFile "$LOG"
+  -executeMethod EdgeChronicles.Tools.Editor.Ci.ProgressionAudit.Run -logFile "$LOG"
 code=$?
 if grep -q "ProgressionAudit: tables=20 orphans=0 derivedOverwritten=100%" "$LOG" 2>/dev/null; then
   echo "[OK] 养成数据完整性通过"; exit 0
