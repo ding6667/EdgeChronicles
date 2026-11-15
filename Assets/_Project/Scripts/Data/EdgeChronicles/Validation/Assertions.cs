@@ -943,7 +943,14 @@ namespace EdgeChronicles.Data.Validation
                 if (row != null) rows.Add(row);
             }
 
+            // 枚举全组合：目的是**证明冲突检测是穷尽的**，不是「每种组合都得合法」。
+            // 同一互斥组的两条特技**本来就应该**在池子里共存（每组 2 条是设计），
+            // 报错发生在「玩家真的把这两条装进 3 个槽位」的那一刻。
+            // 因此这里判定两件事：
+            //   ① 每一种三槽组合，冲突检测器都能把同组的对找出来（不多不少）；
+            //   ② 存在合法组合（三条互不同组）——否则玩家凑不出可用的槽位。
             int combos = 0;
+            int legalCombos = 0;
             for (int i = 0; i < rows.Count; i++)
             {
                 for (int j = i + 1; j < rows.Count; j++)
@@ -952,20 +959,47 @@ namespace EdgeChronicles.Data.Validation
                     {
                         combos++;
                         var trio = new[] { rows[i], rows[j], rows[k] };
+
+                        var expectedConflicts = new List<string>();
                         for (int a = 0; a < 3; a++)
                         {
                             for (int b = a + 1; b < 3; b++)
                             {
                                 if (string.Equals(trio[a].exclude_group, trio[b].exclude_group, StringComparison.Ordinal))
                                 {
-                                    report.Error("A34", "specialty",
-                                        trio[a].spec_id + "+" + trio[b].spec_id, "exclude_group",
-                                        $"同一互斥组「{trio[a].exclude_group}」的两条特技不能并存（槽位组合：{trio[0].spec_id}/{trio[1].spec_id}/{trio[2].spec_id}）");
+                                    expectedConflicts.Add(trio[a].spec_id + "+" + trio[b].spec_id);
                                 }
                             }
                         }
+
+                        if (expectedConflicts.Count == 0) legalCombos++;
+
+                        var detected = new List<string>();
+                        for (int a = 0; a < 3; a++)
+                        {
+                            for (int b = a + 1; b < 3; b++)
+                            {
+                                if (FindConflict(rows, trio[a].spec_id, trio[b].spec_id) != null)
+                                {
+                                    detected.Add(trio[a].spec_id + "+" + trio[b].spec_id);
+                                }
+                            }
+                        }
+
+                        if (detected.Count != expectedConflicts.Count)
+                        {
+                            report.Error("A34", "specialty",
+                                trio[0].spec_id + "+" + trio[1].spec_id + "+" + trio[2].spec_id, "exclude_group",
+                                $"三槽组合的冲突检测不穷尽：期望 {expectedConflicts.Count} 对，实际 {detected.Count} 对");
+                        }
                     }
                 }
+            }
+
+            if (legalCombos == 0)
+            {
+                report.Error("A34", "specialty", null, "exclude_group",
+                    "不存在三条互不同组的合法三槽组合（玩家凑不出可用的槽位）");
             }
 
             // 负向夹具：同组两条必须报错（与枚举结果一致）
@@ -1063,15 +1097,30 @@ namespace EdgeChronicles.Data.Validation
                 if (row.level > maxLevel) maxLevel = row.level;
             }
 
+            int minLevel = int.MaxValue;
             foreach (var row in byId.Values)
             {
+                if (row.level < minLevel) minLevel = row.level;
+            }
+
+            foreach (var row in byId.Values)
+            {
+                // 最高等级：不可被合成（compose_from 为空）
                 if (row.level == maxLevel && row.compose_from != null && row.compose_from.Length > 0)
                 {
                     report.Error("A36", "socket_item", row.socket_id, "compose_from",
                         $"最高等级（{maxLevel}）的项不得有合成材料");
                 }
 
-                if (row.level < maxLevel)
+                // 基础等级：没有更低级可合成，compose_from 必须为空
+                if (row.level == minLevel && row.compose_from != null && row.compose_from.Length > 0)
+                {
+                    report.Error("A36", "socket_item", row.socket_id, "compose_from",
+                        $"基础等级（{minLevel}）的项没有更低级材料，compose_from 必须为空");
+                }
+
+                // 中间等级：至少有一个低一级的材料
+                if (row.level > minLevel && row.level < maxLevel)
                 {
                     bool hasPrevious = false;
                     if (row.compose_from != null)
