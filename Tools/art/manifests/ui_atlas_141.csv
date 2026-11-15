@@ -50,11 +50,11 @@ UI_PANEL_IconSlot,A,A48,九宫格与底板,PANEL,图标底板：方形小底,图
 UI_PANEL_Slot,A,A49,九宫格与底板,PANEL,槽位底：凹槽小底,槽位底,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_Slot.png
 UI_PANEL_TabBar,A,A50,九宫格与底板,PANEL,页签条：横向长条,页签条,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_TabBar.png
 UI_PANEL_Divider,A,A51,九宫格与底板,PANEL,分隔线：短横线,分隔线,#E8DFC9,#1E1B18,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_PANEL_Divider.png
-UI_ICON_TECH_Tier1,A,A53,技传阶位徽记,TECH,技传第 1 阶徽记：同底板加 1 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier1.png
-UI_ICON_TECH_Tier2,A,A54,技传阶位徽记,TECH,技传第 2 阶徽记：同底板加 2 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier2.png
-UI_ICON_TECH_Tier3,A,A55,技传阶位徽记,TECH,技传第 3 阶徽记：同底板加 3 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier3.png
-UI_ICON_TECH_Tier4,A,A56,技传阶位徽记,TECH,技传第 4 阶徽记：同底板加 4 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier4.png
-UI_ICON_TECH_Tier5,A,A57,技传阶位徽记,TECH,技传第 5 阶徽记：同底板加 5 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier5.png
+UI_ICON_TECH_Tier1,A,A52,技传阶位徽记,TECH,技传第 1 阶徽记：同底板加 1 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier1.png
+UI_ICON_TECH_Tier2,A,A53,技传阶位徽记,TECH,技传第 2 阶徽记：同底板加 2 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier2.png
+UI_ICON_TECH_Tier3,A,A54,技传阶位徽记,TECH,技传第 3 阶徽记：同底板加 3 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier3.png
+UI_ICON_TECH_Tier4,A,A55,技传阶位徽记,TECH,技传第 4 阶徽记：同底板加 4 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier4.png
+UI_ICON_TECH_Tier5,A,A56,技传阶位徽记,TECH,技传第 5 阶徽记：同底板加 5 道刻度,"徽记,刻度",#E8DFC9,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TECH_Tier5.png
 UI_ICON_CUR_Power,A,A57,货币,CURRENCY,战力：交叉双刃,刀身,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Power.png
 UI_ICON_CUR_Edge,A,A58,货币,CURRENCY,锋芒：三角刃尖,刀身,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Edge.png
 UI_ICON_CUR_Fame,A,A59,货币,CURRENCY,名望：圆环加横杠,圆环,#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_CUR_Fame.png
@@ -99,10 +99,10 @@ UI_ICON_VEIN_Hub,B,B37,络脉节点,VEIN,枢纽：双环记号,圆环,#1E1B18,#3
 UI_ICON_VEIN_Branch1,B,B38,络脉节点,VEIN,分支一：环加单枝,"分支,圆环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Branch1.png
 UI_ICON_VEIN_Branch2,B,B39,络脉节点,VEIN,分支二：环加双枝,"分支,圆环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Branch2.png
 UI_ICON_VEIN_Branch3,B,B40,络脉节点,VEIN,分支三：环加三枝,"分支,圆环",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Branch3.png
-UI_ICON_VEIN_Leaf1,B,B42,络脉节点,VEIN,络脉第 1 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf1.png
-UI_ICON_VEIN_Leaf2,B,B43,络脉节点,VEIN,络脉第 2 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf2.png
-UI_ICON_VEIN_Leaf3,B,B44,络脉节点,VEIN,络脉第 3 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf3.png
-UI_ICON_VEIN_Leaf4,B,B45,络脉节点,VEIN,络脉第 4 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf4.png
+UI_ICON_VEIN_Leaf1,B,B41,络脉节点,VEIN,络脉第 1 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf1.png
+UI_ICON_VEIN_Leaf2,B,B42,络脉节点,VEIN,络脉第 2 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf2.png
+UI_ICON_VEIN_Leaf3,B,B43,络脉节点,VEIN,络脉第 3 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf3.png
+UI_ICON_VEIN_Leaf4,B,B44,络脉节点,VEIN,络脉第 4 叶节点：方框加断口铰点,"方框,断口,铰点",#1E1B18,#3E6B78,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_VEIN_Leaf4.png
 UI_ICON_TRIM_Slot1_Kind1,B,B45,锋饰,TRIM,第 1 锋饰槽第 1 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot1_Kind1.png
 UI_ICON_TRIM_Slot1_Kind2,B,B46,锋饰,TRIM,第 1 锋饰槽第 2 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot1_Kind2.png
 UI_ICON_TRIM_Slot1_Kind3,B,B47,锋饰,TRIM,第 1 锋饰槽第 3 类成品记号,"刃器,护具",#1E1B18,#C0392B,1024,128,64,ui_icon,Assets/_Project/Art/UI/Source/UI_ICON_TRIM_Slot1_Kind3.png

@@ -5,6 +5,22 @@
 > 引擎：Unity 2022.3.62f3c1（Unity 中国版 LTS）· URP **14.0.11** · core RP 14.0.12
 > 本文件是描边通道的**唯一规格**。任何其他文档描述描边时只引用本文件，不复述数值。
 
+## 0. 前置条件（不满足则本通道完全不工作）
+
+> **硬前置：URP 资产已创建并挂载。** 本通道是 URP 渲染管线下的自定义 Pass；
+> 工程跑在 Built-in 管线时，Renderer Feature 根本不会被调用，画面不会有任何描边，
+> **且不报任何错**。
+
+| # | 前置条件 | 判据 |
+|---|---|---|
+| P-1 | **URP 资产已创建并挂载** | `GraphicsSettings.m_CustomRenderPipeline` 指向 URP 资产；**全部 6 个画质档**的 `customRenderPipeline` 同样指向它（任一档为 null 都会在切档后回到 Built-in，描边消失） |
+| P-2 | URP Asset 设置 | MSAA = Disabled；Intermediate Texture = Always；Depth Priming = Off；SRP Batcher = ON |
+| P-3 | Renderer = **Forward+** | `UniversalRenderer.asset` 的 `m_RenderingMode = 2`（Forward=0 / Deferred=1 / ForwardPlus=2） |
+| P-4 | 3 个描边 Shader 进 **Always Included Shaders** | `EC/OutlineMask`、`EC/OutlineDilate`、`EC/OutlineComposite`。**漏任一个 → `Shader.Find` 返回 null → 画面无描边且不报错** |
+| P-5 | `EC_Outline` 层已建，角色挂该层 | TagManager 新建层；`FilteringSettings.layerMask` 指向它 |
+| P-6 | Renderer Feature 已挂 | `UniversalRenderer.asset` 的 `m_RendererFeatures` 含 `ECOutlineRendererFeature` |
+| P-7 | 5 个共享材质已加 `ECOutlineMask` Pass，且 8 个描边属性在**已有的** `UnityPerMaterial` CBUFFER 内 | 见 §8.2 |
+
 ---
 
 ## 1. 适用范围与不可协商项
@@ -249,6 +265,7 @@ dInk       = |L(inkBlack)- bgL|
 
 | 项 | 现状 | 要求 | 处置 |
 |---|---|---|---|
+| **挂载**（GraphicsSettings + 6 个画质档） | URP 资产 `a6dcc8f8d08f22c48b76c592598fb518` **已挂上**（GraphicsSettings 与 6 档全部指向它） | 同 | ✅ 已符合 |
 | Rendering Path（Renderer 的 `m_RenderingMode`） | `0` = **Forward** | **Forward+** = `2` | **需改**：`m_RenderingMode: 2`（URP 14 的 `RenderingMode` 枚举：Forward=0 / Deferred=1 / **ForwardPlus=2**） |
 | MSAA | `m_MSAA: 1`（Disabled） | Disabled | ✅ 已符合（自定义 RT 的 msaaSamples 必须与相机深度附件一致） |
 | Intermediate Texture | `m_IntermediateTextureMode: 1`（**Always**） | Always | ✅ 已符合（相机颜色/深度必须是 RTHandle，遮罩 RT 才能与相机深度配对） |
@@ -260,6 +277,7 @@ dInk       = |L(inkBlack)- bgL|
 | 实时阴影距离 | `m_ShadowDistance: 50` | 30m（只覆盖主角） | 建议改 30（美术规格：实时阴影仅覆盖主角 30m） |
 | Renderer Features | `m_RendererFeatures: []` | 挂本 Feature | **需改**：把 `ECOutlineRendererFeature` 加进 Renderer 资产 |
 | Always Included Shaders | 未收录 3 个描边 Shader | 必须收录 | **需改**：追加 `EC/OutlineMask` / `EC/OutlineDilate` / `EC/OutlineComposite`。漏任一个 → `Shader.Find` 返回 null → **画面没有描边且不报错** |
+| `EC_Outline` 层 | TagManager 里**尚不存在** | 必须存在 | **需改**：新建层（Layer 6 或任意空闲层），并把角色 Renderer 挂上去 |
 
 > **Forward+ 的影响**：本方案的 4 个 Pass 全部是经典 `ScriptableRenderPass`，在 Forward / Forward+ / Deferred 三种路径下写法一致，**切到 Forward+ 不需要改任何一行 HLSL**。切到 Forward+ 后 URP 会启用 clustered 光照，`Additional Lights` 走逐像素；本方案的遮罩与合成 Pass 与光照路径无耦合。
 
@@ -332,7 +350,9 @@ IMPL-v3.0 §3.4 要求：玩家攻击＝**竖直刀光竖直面**；命中帧被
 
 ---
 
-## 10. 编译自检清单（工程侧）
+## 10. 验证步骤
+
+### 10.1 编译自检清单（工程侧）
 
 | # | 检查 | 期望 |
 |---|---|---|
@@ -345,6 +365,28 @@ IMPL-v3.0 §3.4 要求：玩家攻击＝**竖直刀光竖直面**；命中帧被
 | 7 | VFX（刀光）盖在描边之上，未被描边 | 逐技能走查 |
 | 8 | 集显 1080p30 达标（Frame Debugger 看 Draw Call 与 GPU 时间） | 达标线：描边通道 ≤2.0ms |
 | 9 | 切换 `quality=0` 后帧时间改善 | 记录两组数据 |
+
+| 10 | `ECOutlineRendererFeature` 已挂且 `outlineLayerMask` 指向 `EC_Outline` 层 | Renderer 资产 Inspector 里能看到该 Feature |
+
+### 10.2 实机验证步骤（**URP 启用之后**才可做）
+
+> 前置：§0 的 P-1…P-7 全部满足。**若 URP 未挂载，画面不会有任何描边且不报错** —— 先确认 P-1，再往下走。
+
+| # | 步骤 | 期望 | 不通过时的排查方向 |
+|---|---|---|---|
+| V-1 | 打开 `SampleScene` | **画面无全屏洋红**。洋红 = Shader 编译失败或找不到 | 洋红 → 回到 §10.1 第 1 条 + P-4 |
+| V-2 | 看角色外缘 | **描边出现在物体外缘**，宽度 **3px**（1080p 基准；实现为外 2px + 内 2px 的跨轮廓带） | 无描边 → 角色是否挂 `EC_Outline` 层 / Feature 是否挂上 / `outlineLayerMask` 是否为空 |
+| V-3 | 切 `_OutlineForm = 1`（霸体） | **单边实描 4px**：只在轮廓**外侧**，内侧不描 | 两侧都描 → 形态编码没传到遮罩（查 `enc` 的最低位） |
+| V-4 | 切 `_OutlineForm = 2`（无敌） | **双边中空**：内外各一条 2px 描边，中间挖空透出背景 | 变实心 → 查内缩档位 `dil.b` / `dil.a` |
+| V-5 | 切 `_OutlineForm = 3`（压边） | 常规墨线 + 外侧 2px **反明度**压边 | 压边同色 → `EC_DerivePressColor` 的明度比较写反 |
+| V-6 | 切到**暗底**场景（铁砧窟配色） | 墨线**自动变纸白** | 仍是墨黑 → 背景环采样没取到 / `EC_DeriveInkColor` 的 0.60 阈值没生效。**不得靠手工填色掩盖** |
+| V-7 | 角色走到墙后 | 描边**一起被挡** | 描边透墙 → 遮罩 Pass 没挂相机深度附件（`ConfigureTarget(maskRT, cameraDepthTarget)`） |
+| V-8 | 放一个刀光 VFX | 刀光**盖在描边之上**，自身不被描边 | VFX 被描 → 合成注入点晚于半透明（应为 `BeforeRenderingTransparents` 之前） |
+| V-9 | 切 1080p / 1440p / 4K | 描边**粗细一致**（按屏高缩放） | 粗细随分辨率变 → `_ECOutlinePixelScale` 没每帧写 |
+| V-10 | 集显 1080p30 实测 | 描边通道 GPU 时间 **≤2.0ms** | 超标 → 先关 `quality`（去掉内部结构线，省 4 抽样/像素） |
+
+**三形态的开关位置**（V-3…V-5）：表现层用 `MaterialPropertyBlock` 逐 Renderer 写 `_OutlineForm`。
+**不得用 shader keyword 切形态** —— 关键字是材质级的，一旦切变体就等于新增材质变体，违反 5 材质槽硬约束。
 
 ---
 

@@ -31,6 +31,19 @@ gate.py — 《EdgeChronicles》资产入库 Gate
     G7 授权：sidecar 的 origin != "self" 时，license 字段必须非空；
              origin == "ai" 时，generation_record 必须非空
     G8 引用完整性：sidecar 声明的贴图必须真实存在且通过 G2/G3
+    G9 贴图格式分档：**模型贴图 = RGB 三通道、无 alpha**（R=AO G=Rough B=Emissive）；
+             **UI / VFX 贴图 = 必须有 alpha**（RGBA），UI 图标另需四周透明 ≥28%
+    G10 图集格位占用：图集 A 60 / B 63 / C 18（合计 141），技能图集 58/64
+    G11 资源预算：贴图与网格内存不得超��**最低机型档**（默认 low）的
+             `Tools/build/baselines/<tier>.json` 的 `memory` 段
+
+贴图尺寸口径（不写第二套）
+------------------------
+    **出图上限用美术规格**（主角 2048 / 敌人 1024 / Boss 1024 / 场景 512 /
+    UI 母版 1024 / 切片 128）；**机型档的 maxTextureSize 是运行时上限**
+    （低档 masterTextureLimit=1 → 2048 出图在低档运行时降到 1024），
+    因此**不用机型档的 maxTextureSize 判出图**，只用它的 memory 段判资源预算。
+    机型档参数的唯一来源 = Tools/build/baselines/*.json，本脚本不复制任何数值。
 
 失败处置
 --------
@@ -53,12 +66,14 @@ gate.py — 《EdgeChronicles》资产入库 Gate
 """
 
 import argparse
+import csv
 import json
 import os
 import re
 import shutil
 import struct
 import sys
+from collections import Counter
 
 GATE_VERSION = "1.0.0"
 
@@ -105,8 +120,30 @@ UNITY_META_EXT = ".meta"
 GATED_EXT = MODEL_EXT | TEXTURE_EXT
 
 REQUIRED_CHANNELS = "R=AO;G=Rough;B=Emissive"
+REQUIRED_CHANNELS_RGBA = "RGBA"
 PADDING_PX = 4
 UV_EPSILON = 1e-4
+UI_TRANSPARENT_BORDER = 0.28
+
+# 贴图格式分档：模型贴图打包三通道无 alpha；UI / VFX 贴图必须有 alpha
+TEXTURE_KIND_PACKED = "packed"
+TEXTURE_KIND_RGBA = "rgba"
+
+# 目录 -> 贴图格式（sidecar 的 texture_kind 可覆写）
+PACKED_CATEGORIES = ("Character/Hero", "Character/Enemy", "Boss",
+                     "Scene/Module", "Scene/Landmark", "Scene/Ground")
+
+# 图集格位占用（AD-03 §1.1–§1.3 / §4.2 的分配与缓冲）
+ATLAS_OCCUPANCY = {"A": 60, "B": 63, "C": 18}
+ATLAS_CELLS = 64
+VFX_ATLAS_OCCUPIED = 58
+VFX_ATLAS_CELLS = 64
+
+# 机型档（唯一来源 Tools/build/baselines/*.json，本脚本不复制其中的数值）
+BASELINE_DIR_REL = os.path.join("Tools", "build", "baselines")
+DEFAULT_BASELINE_TIER = "low"
+DEFAULT_ATLAS_MANIFEST_REL = os.path.join("Tools", "art", "manifests",
+                                           "ui_atlas_141.csv")
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +173,8 @@ class Record(object):
         self.warnings = []
         self.sidecar = None
         self.sidecar_path = None
+        self.texture_kind = None
+        self.texture_bytes = 0
         self.islands = 0
         self.triangles = None
         self.textures = []
@@ -155,6 +194,7 @@ class Record(object):
             "path": self.path,
             "kind": self.kind,
             "category": self.category,
+            "texture_kind": self.texture_kind,
             "passed": self.passed,
             "triangles": self.triangles,
             "uv_islands": self.islands,
@@ -162,6 +202,45 @@ class Record(object):
             "failures": [f.to_dict() for f in self.failures],
             "warnings": [w.to_dict() for w in self.warnings],
         }
+
+
+# ---------------------------------------------------------------------------
+# 机型档（唯一来源：Tools/build/baselines/*.json）
+# ---------------------------------------------------------------------------
+
+def repo_root_from_script():
+    """Tools/art/gate.py -> 仓库根目录。"""
+    return os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+
+
+def load_baseline(tier, root=None):
+    """读 Tools/build/baselines/<tier>.json。
+
+    返回 (data, problems)。找不到文件时返回 (None, [problem])，
+    **不静默通过**：预算判不了就报出来。
+    """
+    problems = []
+    base = root or repo_root_from_script()
+    path = os.path.join(base, BASELINE_DIR_REL, "%s.json" % tier)
+    if not os.path.isfile(path):
+        problems.append({
+            "code": "G11-NOBASE",
+            "message": "找不到机型档 %s" % path,
+            "fix": "先让发布侧提供 Tools/build/baselines/%s.json" % tier,
+        })
+        return None, problems
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError) as exc:
+        problems.append({
+            "code": "G11-BADBASE",
+            "message": "机型档读取失败：%r" % exc,
+            "fix": "修正 %s" % path,
+        })
+        return None, problems
+    return data, problems
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +296,139 @@ def read_png_info(path):
         "channels": channels,
         "has_alpha": has_alpha,
     }
+
+
+# ---------------------------------------------------------------------------
+# PNG 像素解码（只为判定透明边框；只支持 RGBA8 非隔行）
+# ---------------------------------------------------------------------------
+
+MAX_DECODE_PIXELS = 512 * 512
+
+
+def _png_unfilter(raw, width, height, bpp=4):
+    """反过滤 PNG 扫描线。返回 bytearray 像素数据或 None（格式不支持）。"""
+    stride = width * bpp
+    out = bytearray(stride * height)
+    pos = 0
+    prev = bytearray(stride)
+    for y in range(height):
+        if pos >= len(raw):
+            return None
+        ftype = raw[pos]
+        pos += 1
+        line = bytearray(raw[pos:pos + stride])
+        if len(line) < stride:
+            return None
+        pos += stride
+        if ftype == 0:
+            pass
+        elif ftype == 1:
+            for i in range(bpp, stride):
+                line[i] = (line[i] + line[i - bpp]) & 0xFF
+        elif ftype == 2:
+            for i in range(stride):
+                line[i] = (line[i] + prev[i]) & 0xFF
+        elif ftype == 3:
+            for i in range(stride):
+                left = line[i - bpp] if i >= bpp else 0
+                line[i] = (line[i] + ((left + prev[i]) >> 1)) & 0xFF
+        elif ftype == 4:
+            for i in range(stride):
+                a = line[i - bpp] if i >= bpp else 0
+                b = prev[i]
+                c = prev[i - bpp] if i >= bpp else 0
+                pp = a + b - c
+                pa, pb, pc = abs(pp - a), abs(pp - b), abs(pp - c)
+                if pa <= pb and pa <= pc:
+                    pred = a
+                elif pb <= pc:
+                    pred = b
+                else:
+                    pred = c
+                line[i] = (line[i] + pred) & 0xFF
+        else:
+            return None
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    return out
+
+
+def transparent_border_ratio(path):
+    """返回 (最小透明边距比例, error)。
+
+    最小透明边距比例 = 四个方向里最小的「非透明内容外沿到画布边」的距离 / 画布边长。
+    只支持 RGBA8 非隔行；超出像素预算或格式不支持时返回 (None, 说明)。
+    """
+    import zlib
+
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read()
+    except OSError as exc:
+        return None, "读取失败：%r" % exc
+
+    if not data.startswith(PNG_SIGNATURE):
+        return None, "不是 PNG"
+
+    pos = 8
+    ihdr = None
+    idat = bytearray()
+    while pos + 8 <= len(data):
+        (length,) = struct.unpack(">I", data[pos:pos + 4])
+        ctype = data[pos + 4:pos + 8]
+        chunk = data[pos + 8:pos + 8 + length]
+        if ctype == b"IHDR":
+            ihdr = struct.unpack(">IIBBBBB", chunk[:13])
+        elif ctype == b"IDAT":
+            idat += chunk
+        elif ctype == b"IEND":
+            break
+        pos += 12 + length
+
+    if ihdr is None:
+        return None, "缺少 IHDR"
+    width, height, bit_depth, color_type, _, _, interlace = ihdr
+    if bit_depth != 8 or color_type != 6 or interlace != 0:
+        return None, "只支持 RGBA8 非隔行（当前 bit_depth=%d color_type=%d interlace=%d）" % (
+            bit_depth, color_type, interlace)
+    if width * height > MAX_DECODE_PIXELS:
+        return None, "像素数 %d 超过解码预算 %d" % (width * height, MAX_DECODE_PIXELS)
+
+    try:
+        raw = zlib.decompress(bytes(idat))
+    except zlib.error as exc:
+        return None, "解压失败：%r" % exc
+
+    pixels = _png_unfilter(raw, width, height, bpp=4)
+    if pixels is None:
+        return None, "扫描线反过滤失败"
+
+    min_x, min_y, max_x, max_y = width, height, -1, -1
+    stride = width * 4
+    for y in range(height):
+        row = pixels[y * stride:(y + 1) * stride]
+        for x in range(width):
+            if row[x * 4 + 3] != 0:
+                if x < min_x:
+                    min_x = x
+                if x > max_x:
+                    max_x = x
+                break
+        # 逐行找右边界
+        if max_x < width - 1:
+            for x in range(width - 1, -1, -1):
+                if row[x * 4 + 3] != 0:
+                    if x > max_x:
+                        max_x = x
+                    break
+    if max_x < 0:
+        return 0.0, "整张图全透明"
+
+    margins = (min_x / float(width),
+               (width - 1 - max_x) / float(width),
+               min_y / float(height),
+               (height - 1 - max_y) / float(height))
+    return min(margins), None
 
 
 # ---------------------------------------------------------------------------
@@ -410,26 +622,50 @@ def classify(rel_path, ext):
 # 单项判定
 # ---------------------------------------------------------------------------
 
-def check_texture(path, rel_path, tex_limit, record):
-    """G2 / G3 / G5（贴图部分）。"""
+def check_texture(path, rel_path, tex_limit, kind, record):
+    """G2 / G3 / G5 / G9（贴图部分）。
+
+    kind = "packed"：模型贴图 —— RGB 三通道、无 alpha、R=AO G=Rough B=Emissive
+    kind = "rgba"  ：UI / VFX 贴图 —— 必须有 alpha；另需四周透明 ≥28%
+    """
     info = read_png_info(path)
     if info is None:
         record.fail("G3-PARSE", "无法解析 PNG 头（文件损坏或不是 PNG）",
                     "导出为标准 PNG 后重新提交")
         return
 
-    if info["color_type"] != 2:
-        record.fail("G3-CHANNEL",
-                    "贴图必须为 RGB 三通道（当前 color type %d，通道数 %d）"
-                    % (info["color_type"], info["channels"]),
-                    "导出为 RGB 8bit PNG，去掉 alpha")
-    if info["has_alpha"]:
-        record.fail("G3-ALPHA", "贴图含 alpha 通道（tRNS / RGBA），"
-                    "本项目贴图固定 R=AO G=Rough B=Emissive，无 alpha",
-                    "导出为 RGB 8bit PNG")
     if info["bit_depth"] != 8:
         record.fail("G3-DEPTH", "贴图位深必须为 8（当前 %d）" % info["bit_depth"],
-                    "导出为 RGB 8bit PNG")
+                    "导出为 8bit PNG")
+
+    if kind == TEXTURE_KIND_PACKED:
+        if info["color_type"] != 2:
+            record.fail("G3-CHANNEL",
+                        "模型贴图必须为 RGB 三通道（当前 color type %d，通道数 %d）"
+                        % (info["color_type"], info["channels"]),
+                        "导出为 RGB 8bit PNG（R=AO G=Rough B=Emissive）")
+        if info["has_alpha"]:
+            record.fail("G3-ALPHA",
+                        "模型贴图含 alpha 通道（tRNS / RGBA）；"
+                        "模型贴图固定 R=AO G=Rough B=Emissive，**无 alpha**",
+                        "导出为 RGB 8bit PNG")
+    else:
+        if not info["has_alpha"]:
+            record.fail("G3-NOALPHA",
+                        "UI / VFX 贴图**必须带 alpha**（当前 color type %d，无 alpha）"
+                        % info["color_type"],
+                        "导出为 RGBA8 PNG；图标本体透明、四周透明 ≥28%")
+        else:
+            ratio, err = transparent_border_ratio(path)
+            if ratio is None:
+                record.warn("G9-NOBORDER",
+                            "无法判定透明边框（%s）；请人工确认四周透明 >=28%%" % err)
+            elif ratio < UI_TRANSPARENT_BORDER - 1e-6:
+                record.fail("G9-BORDER",
+                            "四周透明边距最小为 %.1f%%，低于 %d%%"
+                            % (ratio * 100.0, int(UI_TRANSPARENT_BORDER * 100)),
+                            "把内容向内收，四周留白 >=%d%%"
+                            % int(UI_TRANSPARENT_BORDER * 100))
 
     limit = tex_limit if tex_limit else 2048
     if max(info["width"], info["height"]) > limit:
@@ -512,20 +748,40 @@ def check_license(sidecar, record):
                     "填模型、提示词、生成日期、授权条款核对结论")
 
 
-def check_sidecar_required(sidecar, record):
+def infer_texture_kind(category, sidecar):
+    """贴图格式分档。
+
+    sidecar 的 texture_kind 优先（合法值 packed / rgba）；
+    否则按目录推断：模型目录 -> packed，UI / VFX / Source -> rgba。
+    """
+    if sidecar and sidecar.get("texture_kind"):
+        kind = str(sidecar["texture_kind"]).strip().lower()
+        if kind in (TEXTURE_KIND_PACKED, TEXTURE_KIND_RGBA):
+            return kind
+    if category in PACKED_CATEGORIES:
+        return TEXTURE_KIND_PACKED
+    return TEXTURE_KIND_RGBA
+
+
+def expected_channels_for(kind):
+    return REQUIRED_CHANNELS if kind == TEXTURE_KIND_PACKED else REQUIRED_CHANNELS_RGBA
+
+
+def check_sidecar_required(sidecar, record, expected_channels=None):
     """sidecar 必填字段。"""
     if "tri_count" not in sidecar:
         record.fail("G1-NOTRI", "sidecar 缺少 tri_count", "填三角面数")
     if "material_slots" not in sidecar:
         record.fail("G4-NOSLOT", "sidecar 缺少 material_slots", "填材质槽数（必须为 1）")
+    want = expected_channels or REQUIRED_CHANNELS
     if "channels" not in sidecar:
         record.fail("G3-NOCH", "sidecar 缺少 channels",
-                    '固定填 "%s"' % REQUIRED_CHANNELS)
-    elif str(sidecar["channels"]).replace(" ", "") != REQUIRED_CHANNELS:
+                    '固定填 "%s"' % want)
+    elif str(sidecar["channels"]).replace(" ", "") != want:
         record.fail("G3-CH",
                     "channels 字段必须为 \"%s\"（当前 \"%s\"）"
-                    % (REQUIRED_CHANNELS, sidecar["channels"]),
-                    '改成 "%s"' % REQUIRED_CHANNELS)
+                    % (want, sidecar["channels"]),
+                    '改成 "%s"' % want)
 
 
 # ---------------------------------------------------------------------------
@@ -574,10 +830,17 @@ def find_sidecar_for(rel_path, sidecars):
     return None
 
 
-def run_gate(root, dry_run=False, do_reject=True):
+def run_gate(root, dry_run=False, do_reject=True,
+             baseline_tier=DEFAULT_BASELINE_TIER, atlas_manifest=None):
     if not os.path.isdir(root):
         sys.stderr.write("[gate] 根目录不存在：%s\n" % root)
         return 2, None
+
+    base_root = repo_root_from_script()
+    if atlas_manifest is None:
+        atlas_manifest = os.path.join(base_root, DEFAULT_ATLAS_MANIFEST_REL)
+
+    baseline, baseline_problems = load_baseline(baseline_tier, base_root)
 
     files, sidecars = collect_files(root)
     cache = {}
@@ -631,9 +894,9 @@ def run_gate(root, dry_run=False, do_reject=True):
                 rec.fail("G2-EXT", "贴图只接受 PNG/TGA（当前 %s）" % ext,
                          "导出为 PNG")
             else:
-                check_texture(os.path.join(root, rel), rel, tex_limit, rec)
-                # 贴图的授权 / AI 生成记录：sidecar 存在则必检，不存在则告警
+                # 贴图的授权 / AI 生成记录 + 格式分档：sidecar 存在则必检，不存在则告警
                 sc_rel = find_sidecar_for(rel, sidecars)
+                sidecar = None
                 if sc_rel:
                     rec.sidecar_path = sc_rel
                     sidecar = load_sidecar(root, sc_rel, cache)
@@ -647,6 +910,15 @@ def run_gate(root, dry_run=False, do_reject=True):
                     rec.warn("G7-NOSC",
                              "贴图没有 sidecar，无法核验授权与 AI 生成记录"
                              "（%s.meta.json）" % stem)
+
+                kind = infer_texture_kind(category, sidecar)
+                rec.texture_kind = kind
+                check_texture(os.path.join(root, rel), rel, tex_limit, kind, rec)
+                info = read_png_info(os.path.join(root, rel))
+                if info:
+                    rec.texture_bytes = int(info["width"] * info["height"] *
+                                            max(1, info["channels"]) *
+                                            MIP_CHAIN_FACTOR)
         elif kind == "model":
             if ext not in MODEL_EXT:
                 rec.fail("G1-EXT", "模型只接受 OBJ/FBX（当前 %s）" % ext,
@@ -672,6 +944,22 @@ def run_gate(root, dry_run=False, do_reject=True):
     # 引用完整性（G8）
     _check_references(root, records, cache)
 
+    # 全局判定：G10 图集格位 / G11 资源预算
+    for prob in check_atlas_manifest(atlas_manifest):
+        rec = Record("(全局) 图集格位", "global", "ATLAS")
+        rec.fail(prob["code"], prob["message"], prob.get("fix", ""))
+        records.append(rec)
+
+    for prob in baseline_problems:
+        rec = Record("(全局) 机型档 %s" % baseline_tier, "global", "BASELINE")
+        rec.fail(prob["code"], prob["message"], prob.get("fix", ""))
+        records.append(rec)
+
+    for prob in check_budget(records, baseline):
+        rec = Record("(全局) 资源预算", "global", "BUDGET")
+        rec.fail(prob["code"], prob["message"], prob.get("fix", ""))
+        records.append(rec)
+
     # 退回 _WIP
     rejected = []
     if do_reject:
@@ -681,6 +969,9 @@ def run_gate(root, dry_run=False, do_reject=True):
         "gate_version": GATE_VERSION,
         "root": root,
         "dry_run": dry_run,
+        "baseline_tier": baseline_tier,
+        "baseline_loaded": baseline is not None,
+        "atlas_manifest": atlas_manifest,
         "total": len(records),
         "passed": sum(1 for r in records if r.passed),
         "failed": sum(1 for r in records if not r.passed),
@@ -705,7 +996,8 @@ def _check_model(root, rel, ext, stem, tri_limit, tex_limit, sidecars, cache, re
             rec.fail("G8-SC", "sidecar %s 无法解析为 JSON" % sc_rel,
                      "sidecar 必须是合法 UTF-8 JSON 对象")
         else:
-            check_sidecar_required(sidecar, rec)
+            check_sidecar_required(sidecar, rec,
+                                   expected_channels=REQUIRED_CHANNELS)
             check_license(sidecar, rec)
     elif ext == ".obj":
         # .obj 可直接解析几何，但授权信息仍必须有载体
@@ -792,7 +1084,7 @@ def _check_model(root, rel, ext, stem, tri_limit, tex_limit, sidecars, cache, re
                 if info["color_type"] != 2 or info["has_alpha"]:
                     rec.fail("G3-CHANNEL",
                              "贴图 %s 通道不合规（color type %d，含 alpha=%s），"
-                             "必须 RGB 三通道且无 alpha"
+                             "模型贴图必须 RGB 三通道且无 alpha"
                              % (tex_rel, info["color_type"], info["has_alpha"]),
                              "导出为 RGB 8bit PNG")
                 if texture_size is None:
@@ -832,6 +1124,173 @@ def _check_references(root, records, cache):
         if rec.path.replace("\\", "/") not in referenced:
             rec.warn("G8-ORPHAN",
                      "贴图没有被任何 sidecar 引用（孤立资产）")
+
+
+# ---------------------------------------------------------------------------
+# G10 图集格位占用
+# ---------------------------------------------------------------------------
+
+# 各图集的母版 / 显示边长（AD-03 §1.1–§1.3）
+ATLAS_TILE = {
+    "A": (128, 64),
+    "B": (128, 64),
+    "C": (64, 32),
+}
+
+
+def check_atlas_manifest(manifest_path):
+    """G10：UI 图集格位占用与每图集的母版/显示尺寸。
+
+    格位分配的**唯一来源**就是这份清单，判定不得另写一份。
+    """
+    problems = []
+    if not os.path.isfile(manifest_path):
+        return [{
+            "code": "G10-NOMANIFEST",
+            "message": "找不到图集派工清单：%s" % manifest_path,
+            "fix": "先生成 Tools/art/manifests/ui_atlas_141.csv",
+        }]
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8-sig", newline="") as fh:
+            rows = list(csv.DictReader(fh))
+    except (OSError, ValueError) as exc:
+        return [{
+            "code": "G10-BADMANIFEST",
+            "message": "图集清单读取失败：%r" % exc,
+            "fix": "修正 %s" % manifest_path,
+        }]
+
+    counts = Counter(r.get("atlas", "") for r in rows)
+    for atlas in sorted(ATLAS_OCCUPANCY):
+        want = ATLAS_OCCUPANCY[atlas]
+        got = counts.get(atlas, 0)
+        if got != want:
+            problems.append({
+                "code": "G10-COUNT",
+                "message": "图集 %s 分配 %d 格，应为 %d 格" % (atlas, got, want),
+                "fix": "增删清单行到 %d 格" % want,
+            })
+        if got > ATLAS_CELLS:
+            problems.append({
+                "code": "G10-OVER",
+                "message": "图集 %s 占用 %d 格，超过格位数 %d" % (atlas, got, ATLAS_CELLS),
+                "fix": "压回 %d 格以内" % ATLAS_CELLS,
+            })
+
+    total = sum(counts.get(a, 0) for a in ATLAS_OCCUPANCY)
+    if total != sum(ATLAS_OCCUPANCY.values()):
+        problems.append({
+            "code": "G10-TOTAL",
+            "message": "图集分配合计 %d 格，应为 %d 格"
+                       % (total, sum(ATLAS_OCCUPANCY.values())),
+            "fix": "核对三张图集的分配数",
+        })
+
+    seen_ids = set()
+    seen_cells = set()
+    for row in rows:
+        aid = (row.get("id") or "").strip()
+        atlas = (row.get("atlas") or "").strip()
+        cell = (row.get("cell") or "").strip()
+        if not aid:
+            problems.append({"code": "G10-ID", "message": "清单有行的 id 为空",
+                             "fix": "补 id"})
+        elif aid in seen_ids:
+            problems.append({"code": "G10-DUPID", "message": "清单 id 重复：%s" % aid,
+                             "fix": "id 必须唯一"})
+        else:
+            seen_ids.add(aid)
+
+        key = (atlas, cell)
+        if cell and key in seen_cells:
+            problems.append({"code": "G10-DUPCELL",
+                             "message": "清单格位重复：%s %s" % (atlas, cell),
+                             "fix": "一格只放一个资产"})
+        elif cell:
+            seen_cells.add(key)
+
+        if atlas in ATLAS_TILE:
+            want_master, want_display = ATLAS_TILE[atlas]
+            try:
+                master = int(row.get("master_size", 0))
+                display = int(row.get("display_size", 0))
+            except (TypeError, ValueError):
+                master = display = -1
+            if master != want_master or display != want_display:
+                problems.append({
+                    "code": "G10-SIZE",
+                    "message": "图集 %s 的 %s 母版/显示应为 %d/%d，实际 %d/%d"
+                               % (atlas, aid, want_master, want_display, master, display),
+                    "fix": "改成母版 %dpx / 显示 %dpx" % (want_master, want_display),
+                })
+
+    if VFX_ATLAS_OCCUPIED > VFX_ATLAS_CELLS:
+        problems.append({
+            "code": "G10-VFX",
+            "message": "技能 VFX 图集占用 %d 格，超过 %d 格"
+                       % (VFX_ATLAS_OCCUPIED, VFX_ATLAS_CELLS),
+            "fix": "压回 %d 格以内" % VFX_ATLAS_CELLS,
+        })
+
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# G11 资源预算（按最低机型档）
+# ---------------------------------------------------------------------------
+
+# 低模硬边典型值：约 1.5 顶点/面 × 36 B 顶点属性 + 6 B 索引 ≈ 60 B/面，取 64 B 保守上取整。
+# 该系数使 96 MB 的低档网格预算恰好容纳 120 万三角面（IMPL 的同屏面数红线）。
+MESH_BYTES_PER_TRIANGLE = 64
+MIP_CHAIN_FACTOR = 4.0 / 3.0     # mip 链总��约为首级的 1.33 倍
+
+
+def check_budget(records, baseline):
+    """G11：贴图与网格内存预算。
+
+    · 贴图只计**随包发布**的切片（路径含 Atlas 段）；Source 下的母版是源文件，不进包。
+    · 网格计全部模型（都进包）。
+    · 上限取**最低机型档**的 memory 段（把最坏情况锚在最低硬件档）。
+    """
+    problems = []
+    if baseline is None:
+        return problems
+
+    memory = baseline.get("memory", {})
+    tex_cap_mb = memory.get("textureMemoryMB")
+    mesh_cap_mb = memory.get("meshMemoryMB")
+
+    tex_bytes = 0
+    mesh_bytes = 0
+
+    for rec in records:
+        if rec.kind == "texture" and rec.texture_bytes:
+            if "Atlas" in rec.path.split("/"):
+                tex_bytes += rec.texture_bytes
+        if rec.kind == "model" and rec.triangles:
+            mesh_bytes += rec.triangles * MESH_BYTES_PER_TRIANGLE
+
+    if tex_cap_mb:
+        cap = int(tex_cap_mb) * 1024 * 1024
+        if tex_bytes > cap:
+            problems.append({
+                "code": "G11-TEXMEM",
+                "message": "随包贴图内存 %.1f MB，超过机型档上限 %d MB"
+                           % (tex_bytes / 1048576.0, tex_cap_mb),
+                "fix": "降贴图尺寸 / 压缩格式，或走机型档的 masterTextureLimit",
+            })
+    if mesh_cap_mb:
+        cap = int(mesh_cap_mb) * 1024 * 1024
+        if mesh_bytes > cap:
+            problems.append({
+                "code": "G11-MESHMEM",
+                "message": "网格内存 %.1f MB，超过机型档上限 %d MB"
+                           % (mesh_bytes / 1048576.0, mesh_cap_mb),
+                "fix": "减面（低模 + 硬边，优先改拓扑而不是降模精度）",
+            })
+
+    return problems
 
 
 # ---------------------------------------------------------------------------
@@ -1006,6 +1465,32 @@ def _self_test():
         assert "G5-NAME" in codes, "应命中 G5-NAME，实际 %s" % codes
         assert "G7-LICENSE" in codes, "应命中 G7-LICENSE，实际 %s" % codes
 
+        # 3b) UI 图标：合规（RGBA + 透明边）必须通过
+        ui_dir = os.path.join(tmp, "UI", "Source")
+        os.makedirs(ui_dir)
+        _write_png(os.path.join(ui_dir, "UI_ICON_SKL_Core.png"), 64, 64,
+                   rgba=True, margin_ratio=0.35)
+        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        assert code == 0, "合规 UI 图标应通过，实际 exit=%d\n%s" % (
+            code, json.dumps(report, ensure_ascii=False, indent=2))
+
+        # 3c) UI 图标：没有 alpha 必须失败（G3-NOALPHA）
+        _write_png(os.path.join(ui_dir, "UI_ICON_SKL_Light.png"), 64, 64, rgba=False)
+        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        assert code == 1
+        codes = {f["code"] for r in report["records"] for f in r["failures"]}
+        assert "G3-NOALPHA" in codes, "应命中 G3-NOALPHA，实际 %s" % codes
+
+        # 3d) UI 图标：透明边不足必须失败（G9-BORDER）
+        os.remove(os.path.join(ui_dir, "UI_ICON_SKL_Light.png"))
+        _write_png(os.path.join(ui_dir, "UI_ICON_SKL_Heavy.png"), 64, 64,
+                   rgba=True, margin_ratio=0.10)
+        code, report = run_gate(tmp, dry_run=True, do_reject=False)
+        assert code == 1
+        codes = {f["code"] for r in report["records"] for f in r["failures"]}
+        assert "G9-BORDER" in codes, "应命中 G9-BORDER，实际 %s" % codes
+        os.remove(os.path.join(ui_dir, "UI_ICON_SKL_Heavy.png"))
+
         # 4) 真实退回：确认文件被移进 _WIP 且写出 _fail.json
         code, report = run_gate(tmp, dry_run=False, do_reject=True)
         assert code == 1
@@ -1015,7 +1500,9 @@ def _self_test():
         assert any(f.endswith("_fail.json") for f in wip_files), \
             "应生成 _fail.json，实际 %s" % wip_files
 
-        print("self-test OK：合规样本通过、违规样本失败、失败资产退回 _WIP 并写 _fail.json")
+        print("self-test OK：合规样本通过、违规样本失败、"
+              "模型贴图无 alpha / UI 贴图必须有 alpha / 透明边框判定均生效、"
+              "失败资产退回 _WIP 并写 _fail.json")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -1036,18 +1523,36 @@ def _write_obj(path, uv_scale=0.5, uv_min=0.1):
         fh.write("f 1/1 3/3 4/4\n")
 
 
-def _write_png(path, width, height):
-    """写一个最小合法 RGB8 PNG（无 alpha）。"""
+def _write_png(path, width, height, rgba=False, margin_ratio=0.3):
+    """写一个最小合法 PNG。
+
+    rgba=False -> RGB8（模型贴图，无 alpha）
+    rgba=True  -> RGBA8，四周按 margin_ratio 留透明边（UI / VFX 贴图）
+    """
     import zlib
-    raw = b""
-    for _y in range(height):
-        raw += b"\x00" + bytes([128, 128, 128] * width)
+    if not rgba:
+        raw = b""
+        for _y in range(height):
+            raw += b"\x00" + bytes([128, 128, 128] * width)
+        color_type = 2
+        px = 3
+    else:
+        m = int(round(width * margin_ratio))
+        raw = b""
+        for y in range(height):
+            row = bytearray()
+            for x in range(width):
+                inside = (m <= x < width - m) and (m <= y < height - m)
+                row += bytes([20, 20, 20, 255] if inside else [0, 0, 0, 0])
+            raw += b"\x00" + bytes(row)
+        color_type = 6
+        px = 4
 
     def chunk(tag, data):
         return (struct.pack(">I", len(data)) + tag + data +
                 struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
-    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, color_type, 0, 0, 0)
     png = (PNG_SIGNATURE + chunk(b"IHDR", ihdr) +
            chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
     with open(path, "wb") as fh:
@@ -1069,6 +1574,11 @@ def main(argv=None):
                         help="只判定不退回 _WIP（退出码仍然反映真实结果）")
     parser.add_argument("--no-reject", action="store_true",
                         help="不移动任何文件（与 --dry-run 同效）")
+    parser.add_argument("--baseline", default=DEFAULT_BASELINE_TIER,
+                        help="机型档（low / medium / high），资源预算按最低档判"
+                             "（默认 %s）" % DEFAULT_BASELINE_TIER)
+    parser.add_argument("--atlas-manifest", default=None,
+                        help="图集派工清单（默认 %s）" % DEFAULT_ATLAS_MANIFEST_REL)
     parser.add_argument("--self-test", action="store_true",
                         help="跑内置自检（用合成样本验证判定逻辑）")
     args = parser.parse_args(argv)
@@ -1079,7 +1589,9 @@ def main(argv=None):
     try:
         code, report = run_gate(args.root,
                                  dry_run=args.dry_run or args.no_reject,
-                                 do_reject=not (args.dry_run or args.no_reject))
+                                 do_reject=not (args.dry_run or args.no_reject),
+                                 baseline_tier=args.baseline,
+                                 atlas_manifest=args.atlas_manifest)
     except Exception as exc:                      # noqa: BLE001 - 顶层兜底，必须非零退出
         sys.stderr.write("[gate] 内部错误：%r\n" % exc)
         return 2
