@@ -149,6 +149,15 @@ namespace EdgeChronicles.Data.Tables
         /// <summary>允许接入的标签。</summary>
         public string allow_tag;
 
+        /// <summary>
+        /// 窗口形态：<c>blocked</c> = 不可取消（窗口长度 0）；<c>on_hit_only</c> = 仅命中可。
+        /// <para>
+        /// 本列是 v2.0 §5 契约之外的**增量列**：v2.0 只需 24 条「标签对」记录，v3.0 §1.3 把它细化为
+        /// 16 组「不可」+ 9 组「仅命中可」，两者必须能被区分，否则「不可」与「仅命中可」在数据层无法分辨。
+        /// </para>
+        /// </summary>
+        public string cancel_mode;
+
         /// <summary>起始帧（C 轴帧，含）。</summary>
         public int from_frame;
 

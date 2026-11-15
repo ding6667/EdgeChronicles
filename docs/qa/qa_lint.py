@@ -25,6 +25,7 @@
 """
 
 import os
+import re
 import subprocess
 import sys
 
@@ -244,7 +245,7 @@ def check_initializers(root, problems):
 
     # 核对 `new <类名> { A = ..., B = ... }`
     new_re = re.compile(r'new\s+(\w+)\s*\{')
-    assign = re.compile(r'(?:^|[{,;])\s*(\w+)\s*=')
+    assign = re.compile(r'\s*([A-Za-z_]\w*)\s*=')
     for path in iter_cs_files(root):
         with open(path, encoding="utf-8") as f:
             src = f.read()

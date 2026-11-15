@@ -78,10 +78,22 @@ namespace EdgeChronicles.Data.Progression
 
         /// <summary>
         /// 合并多个来源的同名效果。
+        /// <para>
+        /// <b>值语义按类别区分，这是 A39 最容易出错的地方</b>：
+        /// <list type="bullet">
+        /// <item><b>上限类（Cap）</b>：来源给的是<b>倍率</b>（系数域 0.01–1.00 是硬约束，绝对值 6 存不进去），
+        /// 合并取<b>最大倍率</b>，结果 = 基数 × 最大倍率。锋芒上限 5 × 1.2 = 6 ✓。</item>
+        /// <item><b>消耗 / 削减类（Reduce）</b>：来源给的是<b>绝对值</b>（层数 / 帧数），
+        /// 合并取<b>最小值</b>，且基数参与取小。破锋消耗 min(3, 2) = 2 ✓。</item>
+        /// <item><b>其余数值类（Numeric）</b>：来源给的是<b>加成量</b>，
+        /// 合并取<b>最小加成</b>（不是求和）。两个来源 0.5 与 0.3 → 取 0.3，不是 0.8 ✓。</item>
+        /// <item><b>离散类（Discrete）</b>：只生效一次，值为 0 / 1。</item>
+        /// </list>
+        /// </para>
         /// </summary>
         /// <param name="effectKey">效果键。</param>
-        /// <param name="baseAbsolute">基数（无来源时的绝对值）。</param>
-        /// <param name="sourceValues">各来源提供的值（上限类 = 倍率；其余 = 绝对值）。</param>
+        /// <param name="baseAbsolute">基数（上限类 = 绝对上限；消耗类 = 绝对消耗；数值类 = 基准加成）。</param>
+        /// <param name="sourceValues">各来源提供的值。</param>
         /// <returns>合并后的值。</returns>
         public static float Merge(string effectKey, float baseAbsolute, IReadOnlyList<float> sourceValues)
         {
@@ -94,22 +106,36 @@ namespace EdgeChronicles.Data.Progression
 
             if (sourceValues == null || sourceValues.Count == 0) return baseAbsolute;
 
-            if (cls == EffectMergeClass.Cap)
+            switch (cls)
             {
-                float best = 1f;
-                for (int i = 0; i < sourceValues.Count; i++)
+                case EffectMergeClass.Cap:
                 {
-                    if (sourceValues[i] > best) best = sourceValues[i];
+                    float best = 1f;
+                    for (int i = 0; i < sourceValues.Count; i++)
+                    {
+                        if (sourceValues[i] > best) best = sourceValues[i];
+                    }
+                    return baseAbsolute * best;
                 }
-                return baseAbsolute * best;
+                case EffectMergeClass.Reduce:
+                {
+                    float result = baseAbsolute;
+                    for (int i = 0; i < sourceValues.Count; i++)
+                    {
+                        if (sourceValues[i] < result) result = sourceValues[i];
+                    }
+                    return result;
+                }
+                default:
+                {
+                    float smallest = sourceValues[0];
+                    for (int i = 1; i < sourceValues.Count; i++)
+                    {
+                        if (sourceValues[i] < smallest) smallest = sourceValues[i];
+                    }
+                    return baseAbsolute + smallest;
+                }
             }
-
-            float result = baseAbsolute;
-            for (int i = 0; i < sourceValues.Count; i++)
-            {
-                if (sourceValues[i] < result) result = sourceValues[i];
-            }
-            return result;
         }
 
         /// <summary>

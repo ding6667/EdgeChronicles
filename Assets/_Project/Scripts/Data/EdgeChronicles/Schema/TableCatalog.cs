@@ -54,6 +54,8 @@ namespace EdgeChronicles.Data.Schema
             list.Add(new TableSchema("cancel_window", typeof(CancelWindowRow), false, new[] { "source_tag", "allow_tag", "from_frame" },
                 new ColumnSpec("source_tag", ColumnType.String, true),
                 new ColumnSpec("allow_tag", ColumnType.String, true),
+                new ColumnSpec("cancel_mode", ColumnType.String, true, allowed: EnumCatalog.CancelModeValues,
+                    note: "blocked = 不可取消；on_hit_only = 仅命中可（v3.0 §1.3 的 16 + 9 组）"),
                 new ColumnSpec("from_frame", ColumnType.Int, true, min: 0),
                 new ColumnSpec("to_frame", ColumnType.Int, true, min: 0),
                 new ColumnSpec("resource_cost", ColumnType.Int, false, min: 0),

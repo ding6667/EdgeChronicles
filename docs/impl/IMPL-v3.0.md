@@ -84,7 +84,7 @@
 | `mc_atk_01` | `MP_HERO_ATK_01` | 普攻 1 段 | 前段峰值递增，**3 段不得同幅** |
 | `mc_atk_02` | `MP_HERO_ATK_02` | 普攻 2 段 | 同上 |
 | `mc_atk_03` | `MP_HERO_ATK_03` | 普攻 3 段 | 同上 |
-| `mc_dodge` | `MP_HERO_DODGE` | 闪避 | 前 2 帧为蹬地窗口（位移 ≤5%）；**美术卡 §1.5 尚未列这条资产，需 art 侧补** |
+| `mc_dodge` | `MP_HERO_DODGE` | 闪避 | 前 2 帧为蹬地窗口（位移 ≤5%）；**原地中性收身**，位移手感由这条曲线承担、不靠 `AN_HERO_DODGE_F` 剪辑 |
 | `mc_skill_01` | `MP_HERO_SKL_01` | 拾锋式（核心） | 落阵曲线 |
 | `mc_skill_02` | `MP_HERO_SKL_02` | 迅锋（3 段合 1 条） | 第 3 段与 `mc_atk_03` 同姿态同帧长 |
 | `mc_skill_03` | `MP_HERO_SKL_03` | 裂石（重击） | — |

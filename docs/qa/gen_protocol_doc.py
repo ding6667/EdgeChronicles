@@ -11,10 +11,18 @@ PRO = os.path.join(ROOT, "Assets/_Project/Tests/Shared/Qa/HumanEyeProtocols.cs")
 pro = io.open(PRO, encoding="utf-8").read()
 
 def fields(block):
+    """提取字段赋值。
+
+    【必须支持一行多个赋值】C# 的对象初始化器常把两个字段写在同一行
+    （如 `Id = "NC-A01", Class = NegativeCaseClass.Sensitivity, TargetCriterionId = ...`），
+    按行解析会漏掉后面的字段 —— 漏一个字段，正文就少一列（甚至整张表空）。
+    切分点用 ", 后面紧跟 标识符 =" 作为边界，字符串内部的逗号不会被误切。
+    """
     d = {}
-    for m in re.finditer(r'^\s*(\w+)\s*=\s*(.*?),?\s*$', block, re.M):
-        k = m.group(1); v = m.group(2).rstrip(',').strip()
-        if k not in d: d[k] = v
+    for line in block.split("\n"):
+        for m in re.finditer(r'(\w+)\s*=\s*(.*?)(?=,\s*\w+\s*=|$)', line):
+            k = m.group(1); v = m.group(2).strip().rstrip(',').strip()
+            if k not in d: d[k] = v
     return d
 def sv(v):
     if v is None: return ""

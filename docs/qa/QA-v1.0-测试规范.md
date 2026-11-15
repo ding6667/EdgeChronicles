@@ -230,9 +230,32 @@ Assets/_Project/Tests/
 
 | 脚本 | 覆盖 |
 |---|---|
-| `Tools/ci/check-tests.sh` | EditMode 全量（L0）——含架构守卫、8 项冒烟（判据侧）、目录完整性、24 A + 6 B 负向用例 |
+| `Tools/ci/check-tests.sh` | EditMode 全量（L0）——含架构守卫、8 项冒烟（判据侧）、目录完整性、24 A + 6 B 负向用例、13 条补充注入 |
 | `Tools/ci/check-tests-playmode.sh` | PlayMode 全量（L1） |
-| `Tools/ci/check-progression.sh` | 养成层数据完整性（**注意**：脚本里的 `-executeMethod` 命名空间与工程不一致，见 D-08） |
+| `Tools/ci/check-progression.sh` | 养成层数据完整性（**注意**：脚本里的 `-executeMethod` 类型尚未建立，见 D-08） |
+| **`python docs/qa/qa_lint.py`** | **QA 静态自检（L-1）**——不需 Unity，1 秒跑完。可直接挂进 `lint.yml` |
+| **`python docs/qa/qa_oracle_mirror.py`** | **43 条负向注入离线自检（L-1）**——判据 oracle 的第二实现 |
+
+### 5.1 QA 静态自检挡什么
+
+这两条脚本存在的唯一理由：本项目在这批文件上踩过**两次"整仓编译红"**，
+两次都是静态可查的——
+
+| 踩坑 | 影响面 | 现在由谁挡 |
+|---|---|---|
+| 中文引号被写成 ASCII 直引号 → 字符串字面量提前结束 → 一连串 CS1003（232 处） | 测试程序集编译失败 → **全仓编译红 → CI 红 → 出包失败** | `qa_lint.py` L1（真正的 C# 词法扫，不是数引号个数） |
+| 对象初始化器里 `Veto = false` 少一个逗号（7 处） | 同上 | `qa_lint.py` L2 |
+| 代码位置混入全角标点 | 同上 | `qa_lint.py` L3 |
+| 文件存成 CRLF / 带 BOM | 中文与符号乱码 | `qa_lint.py` L4 |
+| 源码里出现 TODO / 待定 / 工期 / 成本 / 人日 / 预算 / 排期 | 违反项目纪律 | `qa_lint.py` L5 |
+| 改了字段名、另一处还在用旧名（或加了字段但没加声明） | 编译失败，报得晚 | `qa_lint.py` L7 |
+| 判据逻辑被改坏而没人发现 | **判据永远报绿** | `qa_oracle_mirror.py`（43 条负向注入） |
+
+> `qa_lint.py` 的每一项都做过**反向验证**：故意注入一个缺逗号 / 一个不存在的字段名，
+> 确认脚本会红——否则它只是一段看起来很认真的代码。
+>
+> `qa_oracle_mirror.py` 是判据逻辑的**第二实现**。它与生产实现对同一场景给出不同结论时会红；
+> **要改的是其中一边，不能改阈值糊过去。**
 
 > **L2（人眼项）不进 CI**：它需要录屏与盲测人力，由 QA 在 Gate 时组织，结果以带协议编号的录屏记录归档。
 

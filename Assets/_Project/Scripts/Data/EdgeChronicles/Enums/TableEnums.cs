@@ -387,6 +387,9 @@ namespace EdgeChronicles.Data
         /// <summary>机关状态的合法值。</summary>
         public static readonly string[] AnchorStateValues = { "Open", "Broken", "Lock" };
 
+        /// <summary>取消窗口形态的合法值。</summary>
+        public static readonly string[] CancelModeValues = { "blocked", "on_hit_only" };
+
         /// <summary>取技传解锁类型。</summary>
         public static TechUnlockType ParseTechUnlockType(string value)
         {
