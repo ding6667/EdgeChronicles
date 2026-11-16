@@ -1,0 +1,36 @@
+{
+  "pipeline_version": "1.0.0",
+  "batch_id": "models_v1",
+  "generated_at": "2026-11-16 12:43:12",
+  "source_manifest": "manifest.json",
+  "item_count": 4,
+  "controlled_deviation": {
+    "template": "ui_icon",
+    "from": "宣纸米白底",
+    "to": "底色由面板提供、图标本体透明",
+    "reason": "图标带死底色、落到不同底板上会出现色块边",
+    "unchanged": "其余词项继承 v2.0 不变；宣纸米白仍作为对比基准出现在提示词里"
+  },
+  "items": [
+    {
+      "id": "CH_HERO_PickBlade",
+      "template": "model_3d",
+      "prompt_file": "prompts/CH_HERO_PickBlade.txt"
+    },
+    {
+      "id": "CH_BOSS_FurnaceThroat",
+      "template": "model_3d",
+      "prompt_file": "prompts/CH_BOSS_FurnaceThroat.txt"
+    },
+    {
+      "id": "CH_BOSS_SteleKeeper",
+      "template": "model_3d",
+      "prompt_file": "prompts/CH_BOSS_SteleKeeper.txt"
+    },
+    {
+      "id": "CH_BOSS_MuteBlade",
+      "template": "model_3d",
+      "prompt_file": "prompts/CH_BOSS_MuteBlade.txt"
+    }
+  ]
+}

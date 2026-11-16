@@ -43,6 +43,35 @@ gate.py — 《EdgeChronicles》资产入库 Gate
     G13 描边管线挂载：GraphicsSettings 与**全部画质档**都必须挂 URP 资产
              （任一档为空 -> 切到那档回到 Built-in，描边消失）
 
+    ——— 以下 3 条是 3D 建模管线（docs/art/modeling-pipeline.md）的机器判定 ———
+
+    G14 顶点色存在：vertex color 是「副本差异」的唯一载体（GDD §8.1 硬条款 ①
+             只留了 ±10% 顶点色这一条差异通道）。OBJ 直接看 `v x y z r g b`
+             是否带颜色分量；FBX 读 sidecar 的 has_vertex_colors。
+             Character/** 与 Boss/** 下缺失 = **失败**；Scene/** 下缺失 = 告警
+             （场景允许用烘焙光照图代替，见 GDD §8.4）
+             **本判据只判"存在"，不判"准不准"**：±10% 与 ΔE ≤8 由 Blender 侧
+             脚本 + 人判承接（本 Gate 拿不到顶点组语义），见 modeling-pipeline §2.3.3
+    G15 rig 缩放（体型比）：Boss 的 rig 缩放必须落在 §3.2 的矩阵内
+             （重甲 A = 1.0× / 1.15×；敏捷 B = 2.2×），且**任何 Boss 不得超过
+             2.2×**（GDD §8.1「体型比 1 : 1.4 : 2.2，哑刀 2.2× 为上限」）。
+             同一 rig 的多个模型必须声明**同一个** rig_scale（否则网格阶段
+             的对齐基准就分叉了，2 套 rig 覆盖 3 Boss 的前提被破坏）
+    G16 UV 模板复用：同一 rig 的模型必须用同一套 UV 布局（uv_template 相同）。
+             3 Boss 里炉喉与碑守共用重甲 A、共用同一张 1024 贴图布局，
+             若两者 uv_template 不同，贴图就必须出两份 -> 违反「单张贴图」。
+             跨 rig 不比较（敏捷 B 是另一套布局）
+
+    可判 / 不可判的边界（**不假装能判**）
+    ------------------------------------
+    以下 3 项**无法**从 .fbx 二进制或 .obj 文本可靠判定，由 Blender 侧人工统计
+    + 人工评审承接，**不由本 Gate 承担**（写在这里是为了不让它变成"没人管"）：
+      · 四边面占比 ≥90%          -> C 闸口人跑 bmesh 统计，手填 sidecar quad_ratio
+      · 水密 / 非流形边 / 内部面  -> C 闸口人跑 bmesh，手填 sidecar is_watertight
+      · 折角 ≥50° 是否建硬边      -> Blender Select Sharp Edges + 人眼截图
+    注意：前两项的 sidecar 字段**本 Gate 不读取**（自述记录，非判据）。
+    UV 重叠与象限由 G6 承担，但 **G6 只对 .obj 生效**（FBX 无几何可解析）。
+
 贴图尺寸口径（不写第二套）
 ------------------------
     **出图上限用美术规格**（主角 2048 / 敌人 1024 / Boss 1024 / 场景 512 /
@@ -69,6 +98,23 @@ gate.py — 《EdgeChronicles》资产入库 Gate
         origin           str      self | purchased | ai | cc0 | licensed
         license          str      非空（origin != self 时必填）
         generation_record str    非空（origin == ai 时必填）
+
+    * 3D 建模管线追加的 sidecar 可选字段（**前 4 项由 G14–G16 实际判定**）：
+        has_vertex_colors  bool   顶点色是否存在（Character/** 与 Boss/** 必填）-> G14
+        rig               str     rig 名（重甲 A / 敏捷 B …），Boss 必填      -> G15
+        rig_scale         float   rig 根节点缩放（1.0 / 1.15 / 2.2），Boss 必填 -> G15
+        uv_template       str     UV 布局标识（同 rig 必须相同）              -> G16
+
+    * 以下 2 项**本 Gate 不读取**，是给人看的自述记录（**不要误以为它们被判定**）：
+        quad_ratio        float   四边面占比（0–1）；C 闸口人工跑 bmesh 后手填
+        is_watertight     bool    水密；C 闸口 bmesh 边界边/非流形边 = 0 后手填
+      现状：本项目**没有** Blender 侧自动化脚本，故无"自动回填"。这两条判据的
+      防线在评审（docs/art/modeling-pipeline.md §3.2），不在 CI。若要加机器判定，
+      先写 Blender 统计脚本，再让 Gate 校验字段范围 —— 在脚本存在之前不许写"自动回填"。
+
+    * 同理，以下两条**本 Gate 也不做**（需要顶点组语义 + 逐块色统计，Gate 无此输入）：
+        顶点色 ±10%（副本偏移）· ΔE ≤8（与 6 色语义表）
+      归属：Blender 侧脚本出 CSV + 人判，见 docs/art/modeling-pipeline.md §2.3.3。
 """
 
 import argparse
@@ -81,7 +127,7 @@ import struct
 import sys
 from collections import Counter
 
-GATE_VERSION = "1.0.0"
+GATE_VERSION = "1.1.0"
 
 # ---------------------------------------------------------------------------
 # 分类规则：按目录决定 名称正则 / 面数上限 / 贴图上限 / 类型
@@ -184,6 +230,12 @@ class Record(object):
         self.islands = 0
         self.triangles = None
         self.textures = []
+        # G14–G16（3D 建模管线）
+        self.has_vertex_colors = None
+        self.vertex_color_ratio = None
+        self.rig = None
+        self.rig_scale = None
+        self.uv_template = None
 
     @property
     def passed(self):
@@ -205,6 +257,11 @@ class Record(object):
             "triangles": self.triangles,
             "uv_islands": self.islands,
             "textures": self.textures,
+            "has_vertex_colors": self.has_vertex_colors,
+            "vertex_color_ratio": self.vertex_color_ratio,
+            "rig": self.rig,
+            "rig_scale": self.rig_scale,
+            "uv_template": self.uv_template,
             "failures": [f.to_dict() for f in self.failures],
             "warnings": [w.to_dict() for w in self.warnings],
         }
@@ -976,6 +1033,12 @@ def run_gate(root, dry_run=False, do_reject=True,
             rec.warn(warn["code"], warn["message"])
         records.append(rec)
 
+    # G16 跨文件判定：同一 rig 必须共用一套 UV 布局（要扫完全部模型才能比）
+    for prob in check_uv_template_consistency(records):
+        rec = Record("(全局) UV 布局复用", "global", "UVTPL")
+        rec.fail(prob["code"], prob["message"], prob.get("fix", ""))
+        records.append(rec)
+
     # 退回 _WIP
     rejected = []
     if do_reject:
@@ -1110,6 +1173,14 @@ def _check_model(root, rel, ext, stem, tri_limit, tex_limit, sidecars, cache, re
     if mesh is not None:
         check_uv(mesh, texture_size, rec)
 
+    # G14 顶点色（Character/** 与 Boss/** 缺失即失败）
+    check_vertex_colors(rec, sidecar, rec.category,
+                        obj_path=full if ext == ".obj" else None)
+
+    # G15 rig 缩放（仅 Boss）/ G16 UV 布局声明（仅 Boss）
+    check_rig_scale(rec, sidecar, rec.category)
+    check_uv_template(rec, sidecar, rec.category)
+
 
 def find_owner(sc_rel, files):
     base = sc_rel.rsplit("/", 1)[-1]
@@ -1143,8 +1214,194 @@ def _check_references(root, records, cache):
 
 
 # ---------------------------------------------------------------------------
-# G12 / G13 描边管线接线（静默失败点）
+# G14–G16：3D 建模管线的机器判定
 # ---------------------------------------------------------------------------
+
+# 体型比上限（GDD §8.1 剪影行：「体型比 小怪:精英:Boss = 1:1.4:2.2」，
+# 哑刀 2.2× 为上限）。**不允许出现 >2.2 的缩放**。
+BOSS_SCALE_LIMIT = 2.2
+
+# §3.2 的 2 套 rig 复用矩阵：rig 名 -> 允许的 rig_scale 集合
+#   「重甲 A」被炉喉（1.0×）与碑守（1.15×）共用；
+#   「敏捷 B」只给哑刀（2.2×）。**这是白名单，不在这张表里 = 新增 rig = 失败**
+RIG_SCALE_MATRIX = {
+    "重甲 A": (1.0, 1.15),
+    "敏捷 B": (2.2,),
+}
+
+# 必须带顶点色的目录（场景允许用烘焙光照图代替，故不含 Scene/**）
+VERTEX_COLOR_REQUIRED_CATEGORIES = ("Character/Hero", "Character/Enemy", "Boss")
+
+
+def _parse_obj_vertex_colors(path):
+    """看 OBJ 的 `v` 行是否带颜色分量。
+
+    返回 (vertext_total, with_color, None) 或 (None, None, error)。
+    OBJ 规范里 `v x y z r g b` 是 6 分量写法（r/g/b 在 0..1）。
+    """
+    count = 0
+    with_color = 0
+    try:
+        fh = open(path, "r", encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return None, None, "读取失败：%r" % exc
+    with fh:
+        for line in fh:
+            parts = line.split()
+            if not parts or parts[0] != "v":
+                continue
+            count += 1
+            if len(parts) >= 7:      # v + xyz + rgb
+                with_color += 1
+    return count, with_color, None
+
+
+def check_vertex_colors(rec, sidecar, category, obj_path=None):
+    """G14：顶点色存在性。
+
+    Character/** 与 Boss/** 缺失 = 失败；Scene/** = 告警（可用烘焙光照图代替）。
+    """
+    required = category in VERTEX_COLOR_REQUIRED_CATEGORIES
+
+    declared = None
+    if sidecar and "has_vertex_colors" in sidecar:
+        declared = sidecar.get("has_vertex_colors")
+
+    present = None
+    source = ""
+
+    # OBJ 可以直接实测（比 sidecar 自述可信），优先采信
+    if obj_path is not None:
+        total, with_color, err = _parse_obj_vertex_colors(obj_path)
+        if err is not None:
+            rec.warn("G14-PARSE", "无法解析 OBJ 顶点色（%s）" % err)
+        elif total:
+            present = (with_color > 0)
+            rec.vertex_color_ratio = with_color / float(total)
+            source = "OBJ 实测（%d/%d 个顶点带 rgb 分量）" % (with_color, total)
+    if present is None and declared is not None:
+        present = bool(declared)
+        source = "sidecar has_vertex_colors"
+
+    if present is None:
+        if required:
+            rec.fail("G14-NOVC",
+                     "无法判定顶点色：%s 下必须声明 has_vertex_colors"
+                     "（缺字段不得缺省通过）" % category,
+                     "在 sidecar 里填 has_vertex_colors: true/false，"
+                     "或改用 .obj 让 Gate 直接实测")
+        else:
+            rec.warn("G14-NOVC", "无法判定顶点色（%s 下不强制）" % category)
+        return
+
+    rec.has_vertex_colors = present
+    if not present:
+        msg = "顶点色缺失（%s）；顶点色是副本差异的唯一载体（GDD §8.1 硬条款 ①）" % source
+        if required:
+            rec.fail("G14-NOVC", msg,
+                     "在 Blender 里烘焙或手刷顶点色后重新导出；"
+                     "±10% 容差由美术人工评审判（docs/art/modeling-pipeline.md §3）")
+        else:
+            rec.warn("G14-NOVC", msg + "；场景可用烘焙光照图代替，仅告警")
+
+
+def check_rig_scale(rec, sidecar, category):
+    """G15：Boss 的 rig 缩放必须落在 §3.2 的矩阵内，且不得超过 2.2×。"""
+    if category != "Boss":
+        return
+
+    if not sidecar:
+        return    # 缺 sidecar 已由 G7-NOSC / G8-NOSC 报过，不重复报
+
+    rig = str(sidecar.get("rig", "")).strip()
+    raw_scale = sidecar.get("rig_scale")
+
+    if not rig:
+        rec.fail("G15-NORIG",
+                 "Boss 的 sidecar 缺少 rig 字段（§3.2 的 2 套 rig 复用是硬约束）",
+                 "填 rig：%s 之一" % " / ".join(sorted(RIG_SCALE_MATRIX)))
+        return
+
+    if rig not in RIG_SCALE_MATRIX:
+        rec.fail("G15-RIG",
+                 "rig %r 不在 §3.2 的 2 套 rig 矩阵内（已登记：%s）——"
+                 "新增 rig 会破坏「2 套 rig 覆盖 3 Boss」"
+                 % (rig, " / ".join(sorted(RIG_SCALE_MATRIX))),
+                 "改用已登记的 rig；若确实要新增，先改 docs/art/asset-spec-cards.md §3.2")
+        return
+
+    if raw_scale is None:
+        rec.fail("G15-NOSCALE",
+                 "Boss（rig=%s）的 sidecar 缺少 rig_scale" % rig,
+                 "填 rig 根节点缩放：%s"
+                 % " 或 ".join("%g" % s for s in RIG_SCALE_MATRIX[rig]))
+        return
+
+    try:
+        scale = float(raw_scale)
+    except (TypeError, ValueError):
+        rec.fail("G15-NOSCALE", "rig_scale=%r 不是数字" % raw_scale,
+                 "填浮点数（如 1.0 / 1.15 / 2.2）")
+        return
+
+    rec.rig = rig
+    rec.rig_scale = scale
+
+    # 上界先判：2.2× 是全局上限，任何 rig 都不许越过
+    if scale > BOSS_SCALE_LIMIT + 1e-9:
+        rec.fail("G15-OVER",
+                 "rig_scale = %g 超过体型比上限 %g×"
+                 "（GDD §8.1：小怪 1 : 精英 1.4 : Boss 2.2，哑刀 2.2× 为上限）"
+                 % (scale, BOSS_SCALE_LIMIT),
+                 "压回 ≤%g×；尺寸感靠场景与特效补，不靠继续放大" % BOSS_SCALE_LIMIT)
+        return
+
+    allowed = RIG_SCALE_MATRIX[rig]
+    if not any(abs(scale - a) < 1e-6 for a in allowed):
+        rec.fail("G15-SCALE",
+                 "rig %r 的 rig_scale = %g，但 §3.2 只允许 %s"
+                 % (rig, scale, " 或 ".join("%g" % a for a in allowed)),
+                 "按 §3.2 的变体矩阵改缩放")
+
+
+def check_uv_template(rec, sidecar, category):
+    """G16：同一 rig 的模型必须共用一套 UV 布局。
+
+    只对 Boss 判（3 个 Boss 是「2 套 rig + 单张贴图」的唯一作用域）。
+    """
+    if category != "Boss" or not sidecar:
+        return
+    rig = str(sidecar.get("rig", "")).strip()
+    if not rig:
+        return    # G15-NORIG 已报
+    rec.uv_template = str(sidecar.get("uv_template", "")).strip() or None
+
+
+def check_uv_template_consistency(records):
+    """G16-consistency：全局判定 —— 同 rig 的 uv_template 必须唯一。
+
+    这条必须在扫完所有模型之后做（要跨文件比较）。
+    """
+    problems = []
+    by_rig = {}
+    for rec in records:
+        if getattr(rec, "rig", None) and getattr(rec, "uv_template", None):
+            by_rig.setdefault(rec.rig, {}).setdefault(rec.uv_template, []).append(rec.path)
+
+    for rig, templates in sorted(by_rig.items()):
+        if len(templates) <= 1:
+            continue
+        problems.append({
+            "code": "G16-UVTPL",
+            "message": "rig %r 上出现 %d 套不同的 uv_template（%s）——"
+                       "同 rig 必须共用一套 UV 布局，否则贴图要出多份、"
+                       "违反「单模型 1 张贴图」"
+                       % (rig, len(templates),
+                          "，".join("%s: %s" % (t, "、".join(p))
+                                   for t, p in sorted(templates.items()))),
+            "fix": "把同 rig 的模型对齐到同一套 UV 布局，sidecar 的 uv_template 填同一个值",
+        })
+    return problems
 
 # 三个描边 Shader：漏进 Always Included Shaders -> Shader.Find 返回 null
 # -> Feature 静默跳过 -> 画面无描边且**不报错**。现有任何门控都抓不到。
@@ -1574,19 +1831,25 @@ def _self_test():
             os.makedirs(d)
             return d
 
-        def hero_fixture(root, name="CH_HERO_Test", uv_scale=0.5, uv_min=0.1):
+        def hero_fixture(root, name="CH_HERO_Test", uv_scale=0.5, uv_min=0.1,
+                         vertex_colors=True, extra_sidecar=None):
             d = os.path.join(root, "Character", "Hero")
-            os.makedirs(d)
-            _write_obj(os.path.join(d, "%s.obj" % name), uv_scale=uv_scale, uv_min=uv_min)
+            os.makedirs(d, exist_ok=True)
+            _write_obj(os.path.join(d, "%s.obj" % name), uv_scale=uv_scale,
+                       uv_min=uv_min, vertex_colors=vertex_colors)
             _write_png(os.path.join(d, "TX_Hero.png"), 64, 64)
+            sidecar = {
+                "tri_count": 2,
+                "material_slots": 1,
+                "textures": ["TX_Hero.png"],
+                "channels": REQUIRED_CHANNELS,
+                "origin": "self",
+                "has_vertex_colors": vertex_colors,
+            }
+            if extra_sidecar:
+                sidecar.update(extra_sidecar)
             with open(os.path.join(d, "%s.meta.json" % name), "w", encoding="utf-8") as fh:
-                json.dump({
-                    "tri_count": 2,
-                    "material_slots": 1,
-                    "textures": ["TX_Hero.png"],
-                    "channels": REQUIRED_CHANNELS,
-                    "origin": "self",
-                }, fh)
+                json.dump(sidecar, fh)
             return d
 
         def run(root):
@@ -1711,22 +1974,139 @@ def _self_test():
                 assert not any(p["code"] == "G12-ALWAYS" for p in pipe_problems), \
                     "已收录后不应再报 G12-ALWAYS"
 
+        # 9) G14：角色缺顶点色 -> 必须失败
+        s9 = scenario("s9")
+        hero_fixture(s9, name="CH_HERO_NoVC", vertex_colors=False)
+        code, report = run(s9)
+        assert code == 1, "缺顶点色的角色必须失败，实际 exit=%d" % code
+        assert "G14-NOVC" in codes_of(report), \
+            "应命中 G14-NOVC，实际 %s" % codes_of(report)
+
+        # 10) G15：Boss 的 rig_scale 超过 2.2 -> 必须失败
+        s10 = scenario("s10")
+        d10 = os.path.join(s10, "Boss", "Agile")
+        os.makedirs(d10)
+        _write_obj(os.path.join(d10, "CH_BOSS_MuteBlade.obj"), uv_scale=0.5)
+        _write_png(os.path.join(d10, "TX_MuteBlade.png"), 64, 64)
+        with open(os.path.join(d10, "CH_BOSS_MuteBlade.meta.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump({
+                "tri_count": 2,
+                "material_slots": 1,
+                "textures": ["TX_MuteBlade.png"],
+                "channels": REQUIRED_CHANNELS,
+                "origin": "ai",
+                "license": "AI 生成 · 商用条款待核对（self-test fixture）",
+                "generation_record": "text-to-3D test fixture",
+                "has_vertex_colors": True,
+                "rig": "敏捷 B",
+                "rig_scale": 3.0,
+                "uv_template": "UV_AGILE_B",
+            }, fh)
+        code, report = run(s10)
+        assert code == 1, "rig_scale=3.0 的 Boss 必须失败，实际 exit=%d" % code
+        assert "G15-OVER" in codes_of(report), \
+            "应命中 G15-OVER，实际 %s" % codes_of(report)
+
+        # 11) G15：未登记的 rig -> 必须失败
+        with open(os.path.join(d10, "CH_BOSS_MuteBlade.meta.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump({
+                "tri_count": 2,
+                "material_slots": 1,
+                "textures": ["TX_MuteBlade.png"],
+                "channels": REQUIRED_CHANNELS,
+                "origin": "ai",
+                "license": "AI 生成 · 商用条款待核对（self-test fixture）",
+                "generation_record": "text-to-3D test fixture",
+                "has_vertex_colors": True,
+                "rig": "重甲 C",
+                "rig_scale": 1.0,
+                "uv_template": "UV_HEAVY_A",
+            }, fh)
+        code, report = run(s10)
+        assert code == 1
+        assert "G15-RIG" in codes_of(report), \
+            "未登记的 rig 应命中 G15-RIG，实际 %s" % codes_of(report)
+
+        # 12) G16：同 rig 两套 uv_template -> 必须失败
+        s12 = scenario("s12")
+        d12 = os.path.join(s12, "Boss", "Heavy")
+        os.makedirs(d12)
+        for name, uv_tpl in (("CH_BOSS_FurnaceThroat", "UV_HEAVY_A"),
+                             ("CH_BOSS_SteleKeeper", "UV_HEAVY_A_V2")):
+            _write_obj(os.path.join(d12, "%s.obj" % name), uv_scale=0.5)
+            _write_png(os.path.join(d12, "TX_%s.png" % name), 64, 64)
+            with open(os.path.join(d12, "%s.meta.json" % name), "w",
+                      encoding="utf-8") as fh:
+                json.dump({
+                    "tri_count": 2,
+                    "material_slots": 1,
+                    "textures": ["TX_%s.png" % name],
+                    "channels": REQUIRED_CHANNELS,
+                    "origin": "ai",
+                    "generation_record": "text-to-3D test fixture",
+                    "has_vertex_colors": True,
+                    "rig": "重甲 A",
+                    "rig_scale": 1.15 if name.endswith("SteleKeeper") else 1.0,
+                    "uv_template": uv_tpl,
+                }, fh)
+        code, report = run(s12)
+        assert code == 1, "同 rig 两套 UV 布局必须失败，实际 exit=%d" % code
+        assert "G16-UVTPL" in codes_of(report), \
+            "应命中 G16-UVTPL，实际 %s" % codes_of(report)
+
+        # 13) 合规 Boss：rig 与缩放落在矩阵内 -> 必须通过（G14/G15/G16 全绿）
+        s13 = scenario("s13")
+        d13 = os.path.join(s13, "Boss", "Heavy")
+        os.makedirs(d13)
+        _write_obj(os.path.join(d13, "CH_BOSS_FurnaceThroat.obj"), uv_scale=0.5)
+        _write_png(os.path.join(d13, "TX_FurnaceThroat.png"), 64, 64)
+        with open(os.path.join(d13, "CH_BOSS_FurnaceThroat.meta.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump({
+                "tri_count": 2,
+                "material_slots": 1,
+                "textures": ["TX_FurnaceThroat.png"],
+                "channels": REQUIRED_CHANNELS,
+                "origin": "ai",
+                "license": "AI 生成 · 商用条款待核对（self-test fixture）",
+                "generation_record": "text-to-3D test fixture",
+                "has_vertex_colors": True,
+                "rig": "重甲 A",
+                "rig_scale": 1.0,
+                "uv_template": "UV_HEAVY_A",
+            }, fh)
+        code, report = run(s13)
+        assert code == 0, "合规 Boss 应通过，实际 exit=%d\n%s" % (
+            code, json.dumps(report, ensure_ascii=False, indent=2))
+
         print("self-test OK：合规样本通过、违规样本失败、"
               "模型贴图无 alpha / UI 贴图必须有 alpha / 透明边框判定均生效、"
               "图集格位与资源预算判定接入、"
               "Always Included Shaders 静默失败点可被抓出、"
+              "顶点色缺失 / Boss rig 越界 / 未登记 rig / 同 rig 多套 UV 布局均被抓出、"
               "失败资产退回 _WIP 并写 _fail.json")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def _write_obj(path, uv_scale=0.5, uv_min=0.1):
-    """写一个 2 三角形的 OBJ，UV 落在 [uv_min, uv_min+uv_scale]。"""
+def _write_obj(path, uv_scale=0.5, uv_min=0.1, vertex_colors=True):
+    """写一个 2 三角形的 OBJ，UV 落在 [uv_min, uv_min+uv_scale]。
+
+    vertex_colors=True 时 `v` 行带 rgb 分量（`v x y z r g b`），供 G14 实测。
+    """
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("# gate self-test fixture\n")
         fh.write("usemtl M_Rock\n")
-        fh.write("v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\n")
+        if vertex_colors:
+            fh.write("v 0 0 0 0.5 0.5 0.5\n")
+            fh.write("v 1 0 0 0.5 0.5 0.5\n")
+            fh.write("v 1 1 0 0.5 0.5 0.5\n")
+            fh.write("v 0 1 0 0.5 0.5 0.5\n")
+        else:
+            fh.write("v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\n")
         fh.write("vt %f %f\nvt %f %f\nvt %f %f\nvt %f %f\n"
                  % (uv_min, uv_min,
                     uv_min + uv_scale, uv_min,

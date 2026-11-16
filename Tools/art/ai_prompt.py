@@ -93,20 +93,119 @@ PALETTE = {
 PALETTE_HEX = {v.upper(): k for k, v in PALETTE.items()}
 
 # ---------------------------------------------------------------------------
-# 必含词（AD-03 §5 原词项，一个字都不能少）
+# 必含词
+#   FORM_TERMS = 形态语言共用词项（AD-03 §5 原文词项，2D / 3D 共用）
+#   TEMPLATE_REQUIRED = 按模板取的必含词全集（**按模板分档，不混用**）
+#     为什么必须分档：2D 的「透明背景 / 留白 ≥20% / 64px 附加约束」对 3D 网格无意义；
+#     3D 的「水密 / 四边面 / 三通道打包」对图标无意义。用同一份必含词会逼出一句
+#     「3D 模型要有透明背景」这种互相打脸的提示词。
 # ---------------------------------------------------------------------------
-REQUIRED_TERMS = [
-    "水墨留白",
+FORM_TERMS = [
+    "墨线低模",
+    "硬边水墨",
     "木版硬边",
     "低多边形",
-    "宣纸米白",
-    "色块 ≤8",
-    "单色高对比",
     "硬边平涂",
     "纯墨线轮廓",
+    "3px 等宽",
+    "单色高对比",
+]
+
+# 2D（UI 图标 / 通用物件）专属必含词
+REQUIRED_TERMS_2D = FORM_TERMS + [
+    "水墨留白",
+    "宣纸米白",
+    "色块 ≤8",
     "留白 ≥20%",
     "透明背景",
 ]
+
+# 3D 模型专属必含词（水密 / 四边面 / 顶点色 / 三通道打包 是 3D 链路才有的判据）
+REQUIRED_TERMS_3D = FORM_TERMS + [
+    "色块 ≤8",
+    "宣纸米白",
+    "水密",
+    "四边面",
+    "顶点色",
+    "三通道打包",
+]
+
+# 3D 贴图源图专属必含词（模型贴图固定 R=AO G=Rough B=Emissive、无 alpha）
+#   「硬边平涂」在 3D 贴图上不是修辞：块面内取值恒定、块面边界为硬边，
+#   因此 Roughness 图是**分块常量 + 硬边界**，AO 图也只沿块面缝隙加深。
+#   四张源图与形态语言同源，故形态词项同样适用于 AO / Rough / Emissive。
+REQUIRED_TERMS_TEX = FORM_TERMS + [
+    "色块 ≤8",
+    "宣纸米白",
+    "无 alpha",
+    "R=AO",
+    "G=Rough",
+    "B=Emissive",
+    "8bit",
+]
+
+# 向后兼容别名：本文件早期版本只有一个 REQUIRED_TERMS（= 2D 口径）
+REQUIRED_TERMS = REQUIRED_TERMS_2D
+
+REQUIRED_BY_TEMPLATE = {
+    "ui_icon": REQUIRED_TERMS_2D,
+    "generic": REQUIRED_TERMS_2D,
+    "model_3d": REQUIRED_TERMS_3D,
+    "tex_src_3d": REQUIRED_TERMS_TEX,
+}
+
+# 各模板「附加约束」段内必须出现的专项判据（分段名以「附加约束」结尾）
+SECTION_REQUIRED_BY_TEMPLATE = {
+    "ui_icon": ["单色高对比", "无渐变", "灰度后轮廓仍可辨",
+                "≥4.5:1", "不得以颜色作唯一区分", "留白 ≥20%"],
+    "generic": ["单色高对比", "无渐变", "灰度后轮廓仍可辨",
+                "≥4.5:1", "不得以颜色作唯一区分", "留白 ≥20%"],
+    "model_3d": ["三角面 ≤", "水密", "四边面", "材质槽 1",
+                 "无 alpha", "顶点色", "±10%", "折角"],
+    "tex_src_3d": ["无 alpha", "8bit", "RGB", "三通道"],
+}
+
+# 3D 硬边 / 平滑的折角阈值（可由模板参数覆写）
+#   依据：描边通道的内部结构线由**视空间法线的 2px 邻域差**产生，判据在
+#   ECOutlineComposite.shader：edge = 1 - dot(nC, nN)，_ECOutlineEdgeThreshold = 0.35。
+#   1 - cos(49.46°) = 0.35 -> 折角 ≥49.46° 才开始出现内部墨线。
+#   故硬边阈值取 50°（正好落在描边开始画线的位置），平滑阈值取 30°，
+#   30°–50° 之间留 20° 的禁区（防止建模误差把折角在阈值两侧来回翻）。
+EDGE_HARD_DEG = 50
+EDGE_SMOOTH_DEG = 30
+
+# ---------------------------------------------------------------------------
+# 3D 分类表（**taxonomy 不许写死**）
+# ---------------------------------------------------------------------------
+#   历史教训：本文件曾把 taxonomy 默认值写成 "Boss"、把模板里的名词写死成「敌体」，
+#   结果主角 CH_HERO_PickBlade 被渲染成「一个 Boss 敌体：…」——**主角按 Boss 的体量与
+#   气质进文生 3D**，第一条资产就被污染。所以这里：
+#     ① 词条从清单的 category 列读，**缺了直接报错**，不给静默默认值；
+#     ② 「该元素是它与另两个敌体的唯一可区分依据」这句话对主角**不成立**
+#        （主角没有"另两个敌体"），按分类条件化，见 silhouette_clause。
+#   分类词只描述「体量与身份」，不新增色相、不改体型比。
+TAXONOMY = {
+    "主角": {
+        "label": "主角",
+        "silhouette_clause": "这是玩家全程看到最多的剪影，必须一眼记住，"
+                             "不得靠颜色或光环提醒身份",
+    },
+    "Boss": {
+        "label": "Boss 敌体",
+        "silhouette_clause": "该元素是它与另两个 Boss 的唯一可区分依据",
+    },
+    "精英": {
+        "label": "精英敌体",
+        "silhouette_clause": "该元素是它与同副本小怪的唯一可区分依据",
+    },
+    "小怪": {
+        "label": "小怪",
+        "silhouette_clause": "同族仅靠形状可区分，不得以颜色作唯一区分",
+    },
+}
+
+# 不接受「敌体」二字的分类（主角是玩家角色，不是敌人）
+NON_ENEMY_CATEGORIES = ("主角",)
 
 # ---------------------------------------------------------------------------
 # 必排词（AD-03 §5 原词项）
@@ -117,6 +216,16 @@ BANNED_TERMS = [
     "透视", "文字", "数字", "水印", "签名", "多主体", "复杂背景", "贴图",
     "圆角", "光晕", "体积光",
 ]
+
+# 按模板豁免的必排词（**只对新增的 3D 模板生效，2D 模板口径一字不改**）
+#   「贴图」：2D 里禁它是为了防止图标被画成贴图质感；到了 3D 链路，
+#   「贴图」是**产物类别名**（模型贴图 1024 三通道打包），禁掉会让提示词
+#   无法描述交付物。其余必排词在 3D 模板里仍然全部生效。
+def _banned_exempt_terms(template_name):
+    """3D 模板的必排词豁免集合。2D 模板返回空集（口径不变）。"""
+    if template_name in ("model_3d", "tex_src_3d"):
+        return frozenset({"贴图"})
+    return frozenset()
 
 # 受控语义标签词表（避免提示词漂到风格外）
 SEMANTIC_TAGS = [
@@ -144,6 +253,31 @@ SEMANTIC_TAGS = [
 ]
 
 # ---------------------------------------------------------------------------
+# 3D 受控标签词表（**与 2D 的 SEMANTIC_TAGS 分开**）
+#   为什么不并进上面那张表：2D 标签是「图标上画什么」，3D 标签是「模型长什么样」。
+#   并表会让 3D 提示词被迫用「面板底 / 页签条 / 满级」这类与几何无关的词，
+#   也会让 2D 图标混进「盔甲 / 长臂 / 炉口」这类只在三维里有意义的词。
+#   两张表都只描述**6 色语义表之内**的造型，不引入新色相。
+# ---------------------------------------------------------------------------
+SEMANTIC_TAGS_3D = [
+    # 体型与骨架
+    "人形", "双足", "直立", "宽肩", "窄腰", "长臂", "单臂刃", "重甲", "轻甲",
+    "布衣", "斗笠", "披风", "束带", "护腕", "胫甲",
+    # 主体造型
+    "胸腔", "炉口", "肩甲", "碑形", "刀身", "刃器", "刀柄", "刀镡",
+    "头冠", "面罩", "腰带", "靴", "断口", "裂纹", "刻纹", "铆钉", "钩扣",
+    # 姿态与动作（静态造型用）
+    "前倾", "后仰", "蹲踞", "开腿站", "举刃", "拖刃", "抱臂", "垂手",
+    # 平涂与描边（对齐形态语言）
+    "硬边", "平涂", "块面", "墨线", "留白", "剪影", "低模", "四边面",
+    # 顶点色承载（副本差异的唯一手段）
+    "顶点色", "色块",
+]
+
+# 3D 模板受控标签全集 = 2D 表 + 3D 表（3D 模型提示词也允许用 2D 的通用造型词）
+SEMANTIC_TAGS_ALL = SEMANTIC_TAGS + SEMANTIC_TAGS_3D
+
+# ---------------------------------------------------------------------------
 # 模板
 # ---------------------------------------------------------------------------
 TEMPLATE_UI_ICON = """【主体】{subject}，{tags}，单一主体
@@ -164,9 +298,50 @@ TEMPLATE_GENERIC = """【主体】{subject}，{tags}，单一主体
 【{display_size}px 附加约束】单色高对比；无渐变；灰度后轮廓仍可辨（灰阶 ≤2 级）；与底板 {base_color} 最差对比 ≥4.5:1；同族仅靠形状可区分；不得以颜色作唯一区分；留白 ≥20%；最小线宽在 {master_size} 母版 ≥{line_width_px}px（等价于 128 母版 ≥6px）
 【交付】透明 PNG {gen_size}×{gen_size}，四周透明 ≥28%；附 {display_size}px 缩略图 + 灰度剪影"""
 
+# ---------------------------------------------------------------------------
+# 3D 模板一：文生 3D 模型（text-to-3D / image-to-3D）
+#   与 2D 模板的根本差别：2D 出的是**图像**，3D 出的是**要被重拓扑与绑定的网格**。
+#   故本模板的每一段都对应建模管线里的一个真实闸口（见 modeling-pipeline.md §1）：
+#     【主体】【形态语言】 -> 造型与风格
+#     【独占剪影】          -> 3 Boss 的**唯一可区分依据**（不许各写一份新造型）
+#     【体型与缩放】        -> 体型比 1 : 1.4 : 2.2 与 2 套 rig 的复用前提
+#     【拓扑】              -> 重拓扑目标（四边面 / 密度 / 水密）
+#     【法线与硬边】        -> 描边通道的内部结构线判据（折角阈值）
+#     【材质与顶点色】      -> 材质槽 1 与顶点色 ±10%
+#     【禁止】              -> 必排词 + 3D 专属禁止（巨型/爬行/多足）
+#     【交付】              -> .fbx + sidecar 的实际字段
+# ---------------------------------------------------------------------------
+TEMPLATE_MODEL_3D = """【主体】一个 {taxonomy_label}：{subject}，{tags}；**独占剪影元素 = {silhouette}**，{silhouette_clause}，缩到 64px 黑白剪影后仍必须一眼可辨
+【形态语言】墨线低模·硬边水墨；木版硬边；低多边形；硬边平涂；纯墨线轮廓 3px 等宽；单色高对比；色块 ≤8；只从 6 色语义表取 3 色 —— {primary_name} {primary} / {accent_name} {accent} / 宣纸米白 {base_color}，不引入新色相
+【体型与缩放】{scale_note}；体型比 小怪 1 : 精英 1.4 : Boss 2.2（{body_ratio}）；**双足直立人形，禁巨型 / 禁爬行 / 禁多足**
+【拓扑】单一水密网格，**四边面**为主（四边形 ≥90%，三角形仅用于无可避免的收口）；关节处预留至少 2 圈环状边用于蒙皮；平涂块面 ≤{face_block_budget} 块
+【法线与硬边】折角 ≥{edge_hard_deg}° 一律硬边（法线断开），折角 ≤{edge_smooth_deg}° 一律平滑（法线连续），{edge_smooth_deg}°–{edge_hard_deg}° 之间不新建折角；**不得用平滑着色掩盖造型**（描边通道按法线差画内部结构线，平滑掉折角 = 内部墨线消失）
+【材质与顶点色】材质槽 1（唯一），全部表面由**顶点色**承载明暗与块面区分；顶点色与 {primary_name} {primary} / {accent_name} {accent} 的偏差 ≤±10%；贴图走 {tex_size}×{tex_size} 三通道打包（R=AO G=Rough B=Emissive，**无 alpha**），不在本步生成
+【禁止】{banned} / 巨型 / 爬行 / 多足 / 触手 / 分层衣裙 / 毛发碎片
+【{tri_limit} 三角面附加约束】三角面 ≤{tri_limit}（目标 {tri_target}）；**必须水密**（无非流形边、无浮空碎块、无内部不可见面）；**必须四边面**为主；**材质槽 1**；**无 alpha**（模型贴图无 alpha 通道）；**顶点色存在且偏差 ≤±10%**；**折角 ≥{edge_hard_deg}° 建硬边**
+【交付】单一网格 .fbx（Y 轴向上、正面朝 -Z、变换归零、原点在脚底中点）+ 同名 .meta.json（tri_count / material_slots=1 / textures / channels="R=AO;G=Rough;B=Emissive" / origin=ai / generation_record）；**保留生成原图与本次提示词全文**"""
+
+# ---------------------------------------------------------------------------
+# 3D 模板二：模型贴图源图（四张源图分别生成，再打包成一张三通道图）
+#   为什么必须分四张：AI 生成不出「打包图」——它只会画一张看着好看的 RGB。
+#   正确做法是**一张语义一张**：BaseColor（虽然最终不入包，但顶点色/基础色要它定调）、
+#   AO、Rough、Emissive，人工核对后用打包脚本按通道拼成
+#   1024×1024 RGB 无 alpha 的 TX_*。打包顺序 R=AO, G=Rough, B=Emissive 是硬约定。
+# ---------------------------------------------------------------------------
+TEMPLATE_TEX_SRC_3D = """【主体】{subject} 的**{tex_channel}**贴图源图：{tex_role}
+【形态语言】墨线低模·硬边水墨；木版硬边；低多边形；硬边平涂；纯墨线轮廓 3px 等宽；单色高对比；色块 ≤8
+【色彩】{tex_palette}；整图色块 ≤8；仅许宣纸米白 {base_color} 与 {primary_name} {primary} / {accent_name} {accent} 的明度派生，不引入新色相
+【构图】{tex_size}×{tex_size} 正方形，**背靠背平铺（UV 布局按 modeling-pipeline.md §2 的固定分块）**；块与块之间留 ≥4px 的纯色隔离带；不画透视、不画光照方向
+【线与面】块面内取值恒定（**硬边平涂**），块面边界为硬边（≤2px 过渡）；无模糊过渡、无渐变、无噪点；块面数 ≤{tex_block_budget}
+【禁止】{banned} / 高光 / 环境光遮蔽以外的接触暗部 / 方向性受光
+【{tex_size} 附加约束】**{tex_bit_depth}bit 位深**；**{tex_channel_count}；无 alpha**；{tex_grayscale_note}；输出格式 PNG（**三通道打包时 R=AO，G=Rough，B=Emissive**，三张源图必须同尺寸、同 UV 布局、逐块对齐）
+【交付】单张 {tex_size}×{tex_size} PNG，命名为 TX_{asset_id}_{tex_channel_tag}_SRC.png（源图，存 Source/）；打包后的成品命名为 TX_{asset_id}.png 并附 sidecar，channels = "R=AO;G=Rough;B=Emissive"""
+
 TEMPLATES = {
     "ui_icon": TEMPLATE_UI_ICON,
     "generic": TEMPLATE_GENERIC,
+    "model_3d": TEMPLATE_MODEL_3D,
+    "tex_src_3d": TEMPLATE_TEX_SRC_3D,
 }
 
 # 受控偏离登记（用于校验与报告）
@@ -192,6 +367,62 @@ def _tags_to_text(tags):
     if isinstance(tags, (list, tuple)):
         return "、".join(str(t).strip() for t in tags if str(t).strip())
     return "、".join([t.strip() for t in str(tags).split(",") if t.strip()])
+
+
+def _text_extra_tags_ok():
+    """3D 模板的额外受控参数（默认值集中在这里，便于自检与文档对齐）。
+
+    **taxonomy 不在这里给默认值**：它必须由清单的 category 列派生。
+    给默认值就等于给了一个静默的错误起点（曾经默认成 "Boss"，把主角写成 Boss 敌体）。
+    """
+    return {
+        # 模型
+        "silhouette": "炉口外张的胸腔",
+        "scale_note": "网格以 1.0× 基准身高建模",
+        "body_ratio": "本件 2.2×，为上限",
+        "tri_target": 7500,
+        "tri_limit": 15000,
+        "edge_hard_deg": EDGE_HARD_DEG,
+        "edge_smooth_deg": EDGE_SMOOTH_DEG,
+        "face_block_budget": 24,
+        # 贴图源图
+        "tex_channel": "基础色",
+        "tex_role": "块面明度分布，供人工核对与顶点色采样",
+        "tex_size": 1024,
+        "tex_palette": "单色块面 + 至多 1 个强调块",
+        "tex_block_budget": 12,
+        "tex_bit_depth": 8,
+        "tex_channel_count": "RGB 三通道",
+        "tex_grayscale_note": "AO / Rough 若单独生成则用单通道灰度语义，打包时复制到 R / G",
+        "asset_id": "CH_BOSS_FurnaceThroat",
+        "tex_channel_tag": "Base",
+    }
+
+
+def resolve_taxonomy(spec):
+    """从清单的 category 列解出 (label, silhouette_clause)。**缺失即抛错，不给默认值。**
+
+    分类口径见本文件 TAXONOMY；不在表内的分类一律报错，
+    不"就近猜一个"——猜错就是把主角按 Boss 送进生成器的那类事故。
+    """
+    raw = spec.get("taxonomy")
+    if raw is None or str(raw).strip() == "":
+        raw = spec.get("category")
+    if raw is None or str(raw).strip() == "":
+        raise ValueError(
+            "model_3d 必须声明 category（%s 之一）；"
+            "本字段曾经有写死的默认值 'Boss'，导致主角被渲染成 Boss 敌体"
+            % "、".join(TAXONOMY))
+    key = str(raw).strip()
+    if key not in TAXONOMY:
+        raise ValueError("未知 category %r（只认 %s）"
+                         % (key, "、".join(TAXONOMY)))
+    entry = TAXONOMY[key]
+    return entry["label"], entry["silhouette_clause"]
+
+
+def _render_2d(spec, common):
+    return TEMPLATES[str(spec.get("template", "ui_icon")).strip()].format(**common)
 
 
 def render_prompt(spec):
@@ -225,21 +456,49 @@ def render_prompt(spec):
     line_width_px = int(round(6.0 * master_size / 128.0))
     line_width_px = max(1, line_width_px)
 
-    return TEMPLATES[template_name].format(
-        subject=subject,
-        tags=tags_text,
-        primary=primary,
-        accent=accent,
-        primary_name=_hex_to_name(primary) or "墨黑",
-        accent_name=_hex_to_name(accent) or "朱砂",
-        base_color=base_color,
-        gen_size=gen_size,
-        master_size=master_size,
-        display_size=display_size,
-        master_whitespace_px=master_whitespace_px,
-        line_width_px=line_width_px,
-        banned=" / ".join(BANNED_TERMS),
-    )
+    # 3D 模板的额外字段（2D 模板不会用到，但 format 需要全部键存在）
+    extra = dict(_text_extra_tags_ok())
+    for key in list(extra.keys()):
+        if key in spec and str(spec[key]).strip() != "":
+            extra[key] = spec[key]
+    # 数值型字段强制转 int（CSV 读进来是字符串）
+    for key in ("tri_target", "tri_limit",
+                "edge_hard_deg", "edge_smooth_deg", "tex_size",
+                "tex_block_budget", "face_block_budget"):
+        try:
+            extra[key] = int(extra[key])
+        except (TypeError, ValueError):
+            raise ValueError("%s 必须是整数（当前 %r）" % (key, extra[key]))
+
+    # 分类：**必须从 category 派生，不许写死**（见 resolve_taxonomy 的教训注释）
+    if template_name == "model_3d":
+        label, clause = resolve_taxonomy(spec)
+        extra["taxonomy_label"] = label
+        extra["silhouette_clause"] = clause
+
+    fmt = {
+        "subject": subject,
+        "tags": tags_text,
+        "primary": primary,
+        "accent": accent,
+        "primary_name": _hex_to_name(primary) or "墨黑",
+        "accent_name": _hex_to_name(accent) or "朱砂",
+        "base_color": base_color,
+        "gen_size": gen_size,
+        "master_size": master_size,
+        "display_size": display_size,
+        "master_whitespace_px": master_whitespace_px,
+        "line_width_px": line_width_px,
+        "banned": " / ".join(_banned_terms_for(template_name)),
+    }
+    fmt.update(extra)
+    return TEMPLATES[template_name].format(**fmt)
+
+
+def _banned_terms_for(template_name):
+    """该模板生效的必排词（剔除豁免项）。"""
+    exempt = _banned_exempt_terms(template_name)
+    return [t for t in BANNED_TERMS if t not in exempt]
 
 
 # ---------------------------------------------------------------------------
@@ -287,20 +546,24 @@ def validate_prompt(prompt, template_name="ui_icon"):
     problems = []
     sections = split_sections(prompt)
 
-    # 1) 必含词
-    for term in REQUIRED_TERMS:
+    # 1) 必含词（**按模板分档**：3D 模板不要求「透明背景」，2D 模板不要求「水密」）
+    required = REQUIRED_BY_TEMPLATE.get(template_name, REQUIRED_TERMS_2D)
+    for term in required:
         if term not in prompt:
             problems.append({
                 "code": "AI-REQ",
-                "message": "缺少必含词「%s」" % term,
-                "fix": "把该词项补回模板（AD-03 §5 原文词项，不得删改）",
+                "message": "缺少必含词「%s」（模板 %s）" % (term, template_name),
+                "fix": "把该词项补回模板（原文词项，不得删改）",
             })
 
-    # 2) 必排词：只允许出现在【禁止】段
+    # 2) 必排词：只允许出现在【禁止】段；按模板剔除豁免项
+    exempt = _banned_exempt_terms(template_name)
     for name, body in sections.items():
         if name == "禁止":
             continue
         for term in find_banned_terms(body):
+            if term in exempt:
+                continue
             problems.append({
                 "code": "AI-BAN",
                 "message": "必排词「%s」出现在【%s】段" % (term, name),
@@ -329,28 +592,49 @@ def validate_prompt(prompt, template_name="ui_icon"):
                 "fix": "按 AD-03 §5 补回",
             })
 
-    # 4) 64px 专项约束必须齐全
-    icon_section = None
+    # 4) 附加约束段（段名以「附加约束」结尾）的专项判据必须齐全
+    constraint_section = None
+    constraint_name = ""
     for name, body in sections.items():
-        if name.endswith("px 附加约束"):
-            icon_section = body
+        if name.endswith("附加约束"):
+            constraint_section = body
+            constraint_name = name
             break
-    if icon_section is None:
+    if constraint_section is None:
         problems.append({
             "code": "AI-SIZE",
-            "message": "缺少 64px 专项约束段",
-            "fix": "补回【64px 附加约束】段",
+            "message": "缺少专项约束段（段名以「附加约束」结尾）",
+            "fix": "补回【…附加约束】段",
         })
     else:
-        required_64 = ["单色高对比", "无渐变", "灰度后轮廓仍可辨",
-                       "≥4.5:1", "不得以颜色作唯一区分", "留白 ≥20%"]
-        for term in required_64:
-            if term not in icon_section:
+        for term in SECTION_REQUIRED_BY_TEMPLATE.get(template_name, []):
+            if term not in constraint_section:
                 problems.append({
                     "code": "AI-SIZE",
-                    "message": "64px 专项约束缺少「%s」" % term,
-                    "fix": "按 AD-03 §5 补回该约束项",
+                    "message": "【%s】缺少「%s」" % (constraint_name, term),
+                    "fix": "按模板补回该约束项",
                 })
+
+    # 5) 3D 模型的独占剪影元素必须**具名写进**提示词（它是 3 Boss 唯一可区分依据）
+    if template_name == "model_3d":
+        if "独占剪影元素" not in prompt:
+            problems.append({
+                "code": "AI-SIL",
+                "message": "model_3d 模板缺少「独占剪影元素」声明",
+                "fix": "补回【主体】段里的独占剪影元素（它是 Boss 唯一的可区分依据）",
+            })
+        if "禁巨型" not in prompt or "禁爬行" not in prompt or "禁多足" not in prompt:
+            problems.append({
+                "code": "AI-SIL",
+                "message": "model_3d 模板缺少「禁巨型 / 禁爬行 / 禁多足」",
+                "fix": "GDD §8.1 剪影铁律：非人形敌人必须单独报价，不占 MVP 预算",
+            })
+        if "2.2" not in prompt:
+            problems.append({
+                "code": "AI-SIL",
+                "message": "model_3d 模板缺少体型比 2.2 上限",
+                "fix": "补回「小怪 1 : 精英 1.4 : Boss 2.2」",
+            })
 
     return (len(problems) == 0), problems
 
@@ -377,33 +661,73 @@ def validate_spec(spec):
                                              for k, v in PALETTE.items()),
             })
 
+    # 尺寸字段：**只判清单里真的声明了的**（3D 清单没有母版/显示尺寸，用模板默认值）
     for field in ("gen_size", "master_size", "display_size"):
-        if field in spec and spec[field] in (None, ""):
+        if field not in spec:
+            continue
+        if spec[field] in (None, ""):
             problems.append({"code": "AI-SIZE", "message": "%s 不能为空" % field,
                              "fix": "填整数边长"})
-        else:
-            try:
-                value = int(spec.get(field, 0))
-            except (TypeError, ValueError):
-                problems.append({"code": "AI-SIZE",
-                                 "message": "%s 不是整数" % field,
-                                 "fix": "填整数边长"})
-                continue
-            if value <= 0:
-                problems.append({"code": "AI-SIZE",
-                                 "message": "%s 必须为正" % field,
-                                 "fix": "填正整数边长"})
+            continue
+        try:
+            value = int(spec[field])
+        except (TypeError, ValueError):
+            problems.append({"code": "AI-SIZE",
+                             "message": "%s 不是整数" % field,
+                             "fix": "填整数边长"})
+            continue
+        if value <= 0:
+            problems.append({"code": "AI-SIZE",
+                             "message": "%s 必须为正" % field,
+                             "fix": "填正整数边长"})
 
-    # 标签必须来自受控词表
+    # 标签必须来自受控词表（**按模板选表**：3D 用 2D+3D 的并集，2D 只用 2D 表）
+    template_name = str(spec.get("template", "ui_icon")).strip()
+    allowed_tags = SEMANTIC_TAGS_ALL if template_name in ("model_3d", "tex_src_3d") \
+        else SEMANTIC_TAGS
     tag_text = _tags_to_text(spec.get("tags", ""))
     for tag in [t for t in tag_text.split("、") if t]:
-        if tag not in SEMANTIC_TAGS:
+        if tag not in allowed_tags:
             problems.append({
                 "code": "AI-TAG",
-                "message": "语义标签「%s」不在受控词表内" % tag,
-                "fix": "改用词表内的标签（词表见本文件 SEMANTIC_TAGS）",
+                "message": "语义标签「%s」不在受控词表内（模板 %s）"
+                           % (tag, template_name),
+                "fix": "改用词表内的标签（2D 见 SEMANTIC_TAGS，3D 另见 SEMANTIC_TAGS_3D）",
             })
 
+    # 3D 模板的数值字段越界检查
+    if template_name == "model_3d":
+        # 分类必须可解（写死默认值曾把主角渲染成 Boss 敌体，故这里前置拦截）
+        try:
+            resolve_taxonomy(spec)
+        except ValueError as exc:
+            problems.append({
+                "code": "AI-TAX",
+                "message": str(exc),
+                "fix": "在清单的 category 列填 %s 之一" % "、".join(TAXONOMY),
+            })
+
+        try:
+            tri_limit = int(spec.get("tri_limit", 15000))
+            tri_target = int(spec.get("tri_target", 0))
+        except (TypeError, ValueError):
+            problems.append({"code": "AI-TRI",
+                             "message": "tri_limit / tri_target 必须是整数",
+                             "fix": "填整数三角面数"})
+        else:
+            if tri_limit > 15000:
+                problems.append({
+                    "code": "AI-TRI",
+                    "message": "tri_limit=%d 超过角色面数红线 15000" % tri_limit,
+                    "fix": "Boss / 主角一律 ≤15000 三角面（GDD §8.1 硬条款 ② / gate.py G1）",
+                })
+            if tri_target > tri_limit:
+                problems.append({
+                    "code": "AI-TRI",
+                    "message": "tri_target=%d 不能超过 tri_limit=%d"
+                               % (tri_target, tri_limit),
+                    "fix": "目标值必须小于上限（留出重拓扑误差余量）",
+                })
     return problems
 
 
@@ -413,6 +737,14 @@ def validate_spec(spec):
 
 CSV_FIELDS = ["id", "system", "subject", "tags", "primary", "accent",
               "gen_size", "master_size", "display_size", "template"]
+
+# 3D 清单的可选列（缺列时用模板默认值；有列时必须合法）
+#   category 是**必填**的（taxonomy 由它派生）；taxonomy 若出现则优先采信（别名）
+CSV_FIELDS_3D_OPTIONAL = [
+    "taxonomy", "silhouette", "scale_note", "body_ratio",
+    "tri_target", "tri_limit", "edge_hard_deg", "edge_smooth_deg",
+    "rig", "rig_scale", "uv_template", "output", "sidecar",
+]
 
 
 def load_manifest(path):
@@ -651,13 +983,135 @@ def _self_test():
     if not any(p["code"] == "AI-TAG" for p in probs):
         problems.append("非法语义标签没有被抓到")
 
+    # ------------------------------------------------------------------
+    # 8) 3D 模板：合规的 Boss 条目必须通过
+    # ------------------------------------------------------------------
+    boss = {
+        "id": "CH_BOSS_FurnaceThroat",
+        "category": "Boss",
+        "subject": "铁砧窟守关者：胸腔前壁裂开成一个向外张开的炉口",
+        "tags": "人形,双足,直立,重甲,宽肩,胸腔,炉口,块面",
+        "primary": "#8C5A3B",
+        "accent": "#C0392B",
+        "template": "model_3d",
+        "silhouette": "炉口外张的胸腔",
+        "body_ratio": "本件 2.2×，为上限",
+        "tri_target": 7500,
+        "tri_limit": 15000,
+    }
+    p3d = render_prompt(boss)
+    ok, probs = validate_prompt(p3d, "model_3d")
+    if not ok:
+        problems.append("合规 3D 条目被判失败：%s" % probs)
+
+    if "Boss 敌体" not in p3d:
+        problems.append("category=Boss 的词条没有渲染成「Boss 敌体」")
+    if "另两个 Boss" not in p3d:
+        problems.append("category=Boss 未带上「与另两个 Boss 的唯一可区分依据」这句")
+
+    # ------------------------------------------------------------------
+    # 8b) **回归断言：主角不得被渲染成 Boss 敌体**
+    #     这是曾经的真实 bug（taxonomy 写死成 "Boss"），必须有断言钉住
+    # ------------------------------------------------------------------
+    hero = dict(boss, id="CH_HERO_PickBlade", category="主角",
+                subject="拾锋门刀客：布衣双足直立，单手垂持一把断锋残刀",
+                silhouette="单手垂持的断锋残刀")
+    phero = render_prompt(hero)
+    if "Boss" in phero.split("\n")[0]:
+        problems.append("主角提示词首行出现了「Boss」——taxonomy 写死的 bug 回归了")
+    if "敌体" in phero:
+        problems.append("主角提示词出现了「敌体」——主角不是敌人")
+    if "主角" not in phero.split("\n")[0]:
+        problems.append("主角提示词首行未体现「主角」分类")
+    if "另两个 Boss" in phero:
+        problems.append("主角提示词错误地带上了「另两个 Boss」的句子")
+    if "玩家全程看到最多的剪影" not in phero:
+        problems.append("主角提示词缺少主角专属的剪影约束句")
+
+    # 缺 category 必须报错（不给静默默认值）
+    probs = validate_spec({k: v for k, v in boss.items() if k != "category"})
+    if not any(p["code"] == "AI-TAX" for p in probs):
+        problems.append("缺 category 时没有报 AI-TAX（默认值会把主角写成 Boss）")
+
+    # 3D 必含词齐全，且不要求 2D 专属词（透明背景 / 留白 ≥20%）
+    for term in REQUIRED_TERMS_3D:
+        if term not in p3d:
+            problems.append("model_3d 缺少必含词「%s」" % term)
+    for term in ("透明背景", "留白 ≥20%"):
+        if term in p3d:
+            problems.append("model_3d 混入了 2D 专属词「%s」" % term)
+
+    # 独占剪影元素必须具名写进提示词（3 Boss 的唯一可区分依据）
+    if "独占剪影元素" not in p3d or "炉口外张的胸腔" not in p3d:
+        problems.append("model_3d 未把独占剪影元素写进提示词")
+
+    # 必排词在 3D 正文档仍须受约束（除「贴图」豁免外）
+    for name, body in split_sections(p3d).items():
+        if name == "禁止":
+            continue
+        for term in find_banned_terms(body):
+            if term in _banned_exempt_terms("model_3d"):
+                continue
+            problems.append("3D 必排词「%s」泄漏到【%s】段" % (term, name))
+
+    # 3D 越界必排词必须被抓到
+    bad3d = p3d.replace("【拓扑】", "【拓扑】渐变\n", 1)
+    ok, _probs = validate_prompt(bad3d, "model_3d")
+    if ok:
+        problems.append("3D 越界必排词没有被抓到（校验失效）")
+
+    # 面数越界必须被抓到
+    probs = validate_spec(dict(boss, tri_limit=30000))
+    if not any(p["code"] == "AI-TRI" for p in probs):
+        problems.append("3D 面数越界没有被抓到")
+
+    # 3D 标签越界必须被抓到
+    probs = validate_spec(dict(boss, tags="外星人"))
+    if not any(p["code"] == "AI-TAG" for p in probs):
+        problems.append("3D 非法标签没有被抓到")
+
+    # 2D 标签表不得污染 3D：2D 模板仍不认 3D 专属标签（如「炉口」）
+    probs = validate_spec({"id": "UI_ICON_X", "subject": "s", "tags": "炉口"})
+    if not any(p["code"] == "AI-TAG" for p in probs):
+        problems.append("2D 模板错误地接受了 3D 专属标签")
+
+    # ------------------------------------------------------------------
+    # 9) 3D 贴图源图模板：合规必须通过
+    # ------------------------------------------------------------------
+    tex = {
+        "id": "TX_Hero_Body_AO",
+        "subject": "主角 CH_HERO_PickBlade 的躯干与护腕",
+        "tags": "块面,硬边,平涂,高模细节",
+        "primary": "#1E1B18",
+        "accent": "#3E6B78",
+        "template": "tex_src_3d",
+        "tex_channel": "AO",
+        "tex_role": "块面缝隙与接缝的接触暗部，供打包到 R 通道",
+        "tex_size": 1024,
+        "asset_id": "Hero_Body",
+        "tex_channel_tag": "AO",
+    }
+    ptex = render_prompt(tex)
+    ok, probs = validate_prompt(ptex, "tex_src_3d")
+    if not ok:
+        problems.append("合规贴图源图条目被判失败：%s" % probs)
+
+    for term in REQUIRED_TERMS_TEX:
+        if term not in ptex:
+            problems.append("tex_src_3d 缺少必含词「%s」" % term)
+    for kv in ("R=AO", "G=Rough", "B=Emissive", "无 alpha"):
+        if kv not in ptex:
+            problems.append("tex_src_3d 缺少打包口径「%s」" % kv)
+
     if problems:
         for p in problems:
             sys.stderr.write("[self-test] FAIL %s\n" % p)
         return 1
 
     print("self-test OK：模板合规、受控偏离生效、必含/必排词校验有效、"
-          "颜色与标签越界可被抓出")
+          "颜色与标签越界可被抓出、"
+          "3D 模型与贴图源图模板通过（面数红线 / 独占剪影 / 三通道打包口径生效）、"
+          "2D 与 3D 的必含词与标签表互不污染")
     return 0
 
 

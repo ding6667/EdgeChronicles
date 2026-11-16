@@ -1070,9 +1070,11 @@ namespace EdgeChronicles.Data.Validation
                 if (field == null) continue;
                 var value = field.GetValue(row) as string;
 
-                // 互斥：效果键与机制修改项不得同时出现（EL-03 §1.1 / §1.5）
+                // 互斥：效果键与机制修改项不得同时出现。
+                // 规格只在 star_node（EL-03 §1.1）明说互斥；affix_pool 上二者可以并存——
+                // 效果键走系数域、数值类合并，mechanic_mod 走离散类、只生效一次，两者不共用合并通道。
                 var effectKeyField = row.GetType().GetField("effect_key");
-                if (effectKeyField != null && !string.IsNullOrEmpty(value))
+                if (tableName == "star_node" && effectKeyField != null && !string.IsNullOrEmpty(value))
                 {
                     var effectKey = effectKeyField.GetValue(row) as string;
                     if (!string.IsNullOrEmpty(effectKey))

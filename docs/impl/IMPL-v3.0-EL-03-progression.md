@@ -17,10 +17,10 @@
 | `unlock_tier` | int | **1–5 = 名望档位（I–V）**，与 `progression.fame_unlock_tier` 同值；各系 N1=1 / N2=2 / N3=3 | 是 | `progression.fame_unlock_tier` | 否 |
 | `cost_eu` | int | 1–60 EU | 是 | — | 否 |
 | `effect_key` | string | `eff_*`；**离散 / 次数 / 帧类节点用它**，与 `mechanic_mod` **互斥** | 条件必填 | 效果表 | 否 |
-| `effect_value` | float | 0.01–1.00（**只存系数，不存绝对值**）；与 `mechanic_mod` **互斥** | 条件必填 | — | 否 |
+| `effect_value` | float | **值域按效果单位分档**（§2.1：层 / 次 / 帧 / % / cm / 倍率）：系数 ≤ 1.00、层数 ≤ 8、帧数 ≤ 60；与 `mechanic_mod` **互斥** | 条件必填 | — | 否 |
 | `node_type` | enum | `discrete`离散 / `count`次数 / `frame`帧 / `mechanic`机制（**手填**；C6 复算消耗的类型系数输入：离散 / 帧 = 1，次数 / 机制 = 2） | 是 | — | 否 |
 | `mechanic_mod` | enum | `MM_*`（§2.1 枚举，**共 28 项**）；**机制类节点用它**，与 `effect_key` **互斥** | 条件必填 | — | 否 |
-| `mechanic_param` | int | 0–100，含义随 `mechanic_mod` 定（见 §2.1 末列） | 条件必填 | — | 否 |
+| `mechanic_param` | int | **值域按单位分档**（§2.1 末列）：层 / 次 / 帧 ≤ 100、% ≤ 100、**cm ≤ 1000**（半径类 150 / 300）、倍率 ≤ 1000 | 条件必填 | — | 否 |
 | `prereq_closure` | string[] | — | **禁手填** | — | 是：`prereq_ids` 传递闭包（DFS，去重） |
 | `link_partners` | string[] | — | **禁手填** | — | 是：与本节点在 `star_link` 成对且同系的节点 id（双向） |
 
@@ -66,7 +66,7 @@
 | `exclude_group` | string | 互斥组 id（如 `resource_cap`、`cooldown`） | 是 | — | 否 |
 | `trigger` | enum | `always`常驻 / `on_cast` / `on_hit` / `on_dodge` / `on_perfect_dodge` / `on_core_state`（`always` = 随养成快照生效、无触发帧；IMPL-v3.0.md §4.8.6 要求的第 6 个取值） | 是 | — | 否 |
 | `condition_tag` | string | `cond_*`，可空串 | 否 | — | 否 |
-| `effect_key` / `effect_value` | string / float | `eff_*` / 0.01–1.00 | 是 | — | 否 |
+| `effect_key` / `effect_value` | string / float | `eff_*` / **值域按效果单位分档**：倍率类 0.01–10（锋芒上限 ×1.2、CD 缩放 ×0.785 / ×0.733、窗口 ×1.333）、系数类 0.01–1.00 | 是 | — | 否 |
 | `cooldown_frames` | int | 0–600 | 是 | — | 否 |
 | `cost_eu` | int | 1–40 EU（推导式：`8 × 组内位次`，组内第 1 条 = 8、第 2 条 = 16；6 条合计 72 EU——推导式只在 IMPL-v3.0.md §4.8.6，数值只在本表） | 是 | — | 否 |
 
@@ -80,7 +80,7 @@
 | `node_role` | enum | `branch`分支 / `leaf`叶 / `hub`枢纽（**手填**；C6 复算消耗的角色系数输入：1 / 3 / 9） | 是 | — | 否 |
 | `leaf_order` | int | 1–8（**手填**；叶序系数 = 同一分支下的第 k 个叶 = k。破脉·省 = 1、破脉·连 = 2） | 是 | — | 否 |
 | `mechanic_mod` | enum | **A35 枚举内的 `MM_*`**（见 §2.1） | 否 | — | 否 |
-| `mechanic_param` | int | 0–100（含义随 `mechanic_mod` 定，见 §2.1 枚举表末列） | 否 | — | 否 |
+| `mechanic_param` | int | **值域按单位分档**（§2.1 末列）：层 / 次 / 帧 ≤ 100、% ≤ 100、**cm ≤ 1000**（半径类 150 / 300）、倍率 ≤ 1000 | 否 | — | 否 |
 | `stat_key` / `stat_value` | string / float | **恒为空**。依 v3.0 §4.1「络脉只改机制、不加战力」+ §4.8.3，本表 8 行**全部是机制类**，数值列一律不填；保留两列只为表结构统一，**导表器对这两列做"必须为空"校验** | **恒空** | — | 否 |
 | `cost_eu` | int | 1–50 EU | 是 | — | 否 |
 | `depth` | int | 0–3 | **禁手填** | — | 是：`prereq_ids` 闭包最大深度 |
@@ -94,7 +94,7 @@
 | `slot_kind` | enum | `slot_1` / `slot_2` / `slot_3` | 是 | — | 否 |
 | `level` | int | 1–10 | 是 | — | 否 |
 | `compose_from` | string[] | 2–3 个 `socket_id`，**最高级为空数组** | 是（可空数组） | `socket_item.socket_id` | 否 |
-| `effect_key` / `effect_value` | string / float | `eff_*` / 0.01–1.00 | 是 | — | 否 |
+| `effect_key` / `effect_value` | string / float | `eff_*` / 0.01–1.00（系数域） | 是 | — | 否 |
 | `compose_chain` | string[] | — | **禁手填** | — | 是：`compose_from` 传递闭包 |
 | `is_max_level` | bool | — | **禁手填** | — | 是：不存在以本项为材料的更高等级项 |
 
@@ -117,6 +117,7 @@
 | 表 | 增量字段 | 类型 / 范围 | 必填 | 派生 |
 |---|---|---|---|---|
 | `affix_pool` | `skill_tag` | string `sk_*`，空串 = 不挂技能 | 否 | 否 |
+| | `effect_value` | float，**值域按效果单位分档**（系数 ≤ 1.00、帧数 ≤ 60、层数 ≤ 8）；层数类变化用 `mechanic_mod` 表达 | 否 | 否 |
 | | `mechanic_mod` | enum `MM_*`（A35 清单），空串 = 无机制修改 | 否 | 否 |
 | `skill` | `tech_tiers` | int[] ⊆ [1,5] | **禁手填** | 是：`tech_tier` 中该 `skill_id` 存在的 tier 升序 |
 | | `derivative_ids` | string[] `dv_*` | 否 | 否 |
